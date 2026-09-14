@@ -6,7 +6,7 @@ The service calculates prayer times from geographic coordinates, date, timezone,
 
 ## Project status
 
-Current phase: **Phase 3**
+Current phase: **Phase 4**
 
 Completed:
 
@@ -14,18 +14,29 @@ Completed:
 - Phase 1: project foundation and FastAPI application skeleton
 - Phase 2: verified prayer calculation engine
 - Phase 3: public FastAPI prayer-times endpoint
+- Phase 4: calculated-vs-Azan time distinction and configurable per-prayer adjustments
 
-Phase 3 verification currently has:
+Phase 4 verification currently has:
 
 ```text
-15 passed, 2 warnings
+19 passed, 2 warnings
 ```
 
-`ruff check .` passes.
-
-`ruff format --check .` currently reports formatting differences in three files. Run `ruff format .` before committing.
+`ruff check .` passes. `ruff format --check .` passes.
 
 The two pytest warnings are dependency-stack deprecation warnings from FastAPI/Starlette's test-client stack. They do not currently cause test failures.
+
+### Bug-fix note (pre-Phase-4-approval review)
+
+A codebase review before Phase 4 sign-off found the endpoint in an inconsistent, non-functional state: the domain/service/schema layers for Azan adjustments had already been written, but `app/api/v1/prayer_times.py` still returned the old Phase 3 response shape (`times`) instead of the new `calculated_times` / `azan_times` / `adjustments_minutes` shape, and never called `PrayerAdjustmentService`. Every request to `/api/v1/prayer-times` was failing with a `pydantic.ValidationError`. Separately, `adhanpy` was missing from `pyproject.toml`, so a clean `pip install -e .` would not install the calculation engine at all. Both are fixed as part of this phase; see "Fixed in this review" below.
+
+### Fixed in this review
+
+1. **`app/api/v1/prayer_times.py` — broken response construction.** The endpoint now builds `PrayerAdjustments` from the five `*_adjustment` query parameters, calls `_adjustment_service.apply(result, adjustments)`, and constructs `calculated_times` / `azan_times` / `adjustments_minutes` matching the actual `PrayerTimesResponse` schema. This was previously untested end-to-end; it now is (see `tests/test_prayer_api.py`).
+2. **`pyproject.toml` — missing `adhanpy` runtime dependency.** Added `adhanpy>=1.0,<2.0` to `[project.dependencies]`.
+3. **`README.md` — installation instructions.** Previously only documented `pip install -r requirements-dev.txt`, which installs pytest/httpx/Ruff but not FastAPI/Uvicorn/adhanpy. Now documents `pip install -e .` as the runtime-dependency step, run before the dev-tools step.
+4. **Lint cleanup** (`ruff check --fix` + `ruff format`): unsorted import blocks in `app/domain/prayer.py` and `app/api/v1/prayer_times.py`, an unused `PrayerAdjustments` import, an unused `pydantic.Field` import in `app/schemas/prayer.py`, and inconsistent parameter indentation. `ruff check .` and `ruff format --check .` both pass cleanly.
+5. **`tests/test_prayer_api.py` — updated for the real response contract** and extended with four new Phase 4 tests (adjustment applied/untouched-fields check, negative adjustment, midnight rollover, out-of-range 422).
 
 ---
 
@@ -157,7 +168,13 @@ If the environment already exists:
 source .venv/bin/activate
 ```
 
-Install dependencies:
+Install the application and its runtime dependencies (FastAPI, Uvicorn, `adhanpy`):
+
+```bash
+pip install -e .
+```
+
+Install development tools (pytest, httpx, Ruff):
 
 ```bash
 pip install -r requirements-dev.txt
@@ -435,7 +452,21 @@ Sunset is independently obtained from the same underlying astronomical calculati
 
 # Phase 3: REST API
 
-Current public endpoint:
+Phase 3 introduced the public endpoint:
+
+```text
+GET /api/v1/prayer-times
+```
+
+with `latitude`, `longitude`, `timezone`, `date`, `calculation_method`, `madhab`, and `high_latitude_rule` query parameters, and a response distinguishing coordinates/method/madhab from the calculated prayer times. Phase 4 (below) extended this same endpoint with Azan adjustments; the response shape documented here is the current, Phase-4 shape.
+
+---
+
+# Phase 4: Calculated vs. Azan time, and configurable adjustments
+
+Phase 4 adds the distinction the architecture always intended: the astronomically **calculated** prayer time is never mutated, and a separately reported **Azan** time is the calculated time plus a caller-supplied per-prayer offset in minutes.
+
+Endpoint (unchanged path from Phase 3):
 
 ```text
 GET /api/v1/prayer-times
@@ -452,37 +483,70 @@ Query parameters:
 | `calculation_method` | yes | Calculation method |
 | `madhab` | no | Defaults to `shafi` |
 | `high_latitude_rule` | no | Defaults to `middle_of_the_night` |
+| `fajr_adjustment` | no | Minutes to add to Fajr's Azan time. Defaults to `0`. Range: -1440 to 1440. |
+| `dhuhr_adjustment` | no | Same, for Dhuhr. |
+| `asr_adjustment` | no | Same, for Asr. |
+| `maghrib_adjustment` | no | Same, for Maghrib. |
+| `isha_adjustment` | no | Same, for Isha. |
+
+Sunrise and sunset have no Azan and therefore no adjustment parameter — they only appear in `calculated_times`.
 
 Example:
 
 ```bash
-curl "http://127.0.0.1:8000/api/v1/prayer-times?latitude=35.775&longitude=-78.6336&timezone=America/New_York&date=2015-07-12&calculation_method=north_america&madhab=hanafi"
+curl "http://127.0.0.1:8000/api/v1/prayer-times?latitude=25.2048&longitude=55.2708&timezone=Asia/Dubai&date=2026-09-14&calculation_method=dubai&isha_adjustment=90"
 ```
 
-Expected response:
+Response:
 
 ```json
 {
-  "date": "2015-07-12",
-  "timezone": "America/New_York",
+  "date": "2026-09-14",
+  "timezone": "Asia/Dubai",
   "coordinates": {
-    "latitude": 35.775,
-    "longitude": -78.6336
+    "latitude": 25.2048,
+    "longitude": 55.2708
   },
-  "calculation_method": "north_america",
-  "madhab": "hanafi",
+  "calculation_method": "dubai",
+  "madhab": "shafi",
   "high_latitude_rule": "middle_of_the_night",
-  "times": {
-    "fajr": "04:42",
-    "sunrise": "06:08",
-    "dhuhr": "13:21",
-    "asr": "18:22",
-    "sunset": "20:32",
-    "maghrib": "20:32",
-    "isha": "21:57"
+  "calculated_times": {
+    "fajr": "04:47",
+    "sunrise": "06:01",
+    "dhuhr": "12:18",
+    "asr": "15:45",
+    "sunset": "18:24",
+    "maghrib": "18:27",
+    "isha": "19:42"
+  },
+  "azan_times": {
+    "fajr": "04:47",
+    "dhuhr": "12:18",
+    "asr": "15:45",
+    "maghrib": "18:27",
+    "isha": "21:12"
+  },
+  "adjustments_minutes": {
+    "fajr": 0,
+    "dhuhr": 0,
+    "asr": 0,
+    "maghrib": 0,
+    "isha": 90
   }
 }
 ```
+
+`calculated_times.isha` (19:42) is untouched; `azan_times.isha` (21:12) is the calculated time plus the requested 90-minute offset. This response was produced by the live application, not hand-written.
+
+## Midnight-rollover behavior (explicit design decision)
+
+An adjustment can legitimately push an Azan time past midnight — for example, a large positive Isha adjustment near 23:xx. `azan_times.*` values are computed as timezone-aware `datetime + timedelta(minutes=...)`, so the rollover arithmetic itself is correct: adding 150 minutes to `21:57` correctly produces `00:27` on the following calendar day.
+
+However, in this version the response's top-level `date` field always reflects the **requested** calculation date, and each `azan_times` entry is formatted as a bare `HH:MM` string with no date attached. This means an Azan time that has rolled into the next calendar day is not distinguishable, from the response alone, from one that did not roll over — a client would need to independently know that `isha_adjustment` was large enough to cross midnight.
+
+This is called out explicitly rather than silently shipped: v1 does not attempt to represent the rolled-over calendar date in the response. If a Home Assistant integration needs to schedule an Azan trigger that may land on the next day, that must currently be handled client-side (e.g. by comparing the adjusted `HH:MM` against `calculated_times.isha` and rolling the scheduling day forward if the adjusted value is numerically earlier). A future, explicitly-approved phase could add an ISO-8601 timestamp (date + time) per Azan entry instead of a bare `HH:MM` string if this becomes a real requirement — that would be a breaking `v1` contract change and is intentionally out of scope here.
+
+Rollover arithmetic is covered by `tests/test_prayer_api.py::test_isha_adjustment_can_roll_over_midnight`.
 
 ---
 
@@ -532,11 +596,13 @@ Run the complete suite:
 pytest -q
 ```
 
-Current Phase 3 result:
+Current Phase 4 result:
 
 ```text
-15 passed, 2 warnings
+19 passed, 2 warnings
 ```
+
+The four tests added in Phase 4 cover: a positive adjustment applied to two different prayers while confirming untouched prayers and `calculated_times` stay fixed, a negative adjustment, midnight rollover behavior for a large Isha adjustment, and out-of-range adjustment rejection (422).
 
 The warnings are from the current FastAPI/Starlette test-client dependency stack:
 
@@ -575,14 +641,7 @@ ruff check .
 ruff format --check .
 ```
 
-Before committing Phase 3, run:
-
-```bash
-ruff format .
-pytest -q
-ruff check .
-ruff format --check .
-```
+As of this review, all three pass cleanly with no outstanding issues.
 
 ---
 
@@ -757,13 +816,11 @@ The public API uses application-owned enums and response models.
 
 This prevents an external library's classes from becoming part of the API contract.
 
-## Separate calculated and future adjusted times
+## Separate calculated and adjusted (Azan) times
 
-The current engine produces the calculated prayer times.
+The calculation engine (`PrayerCalculator`) produces only the astronomical `calculated_times`. It has no knowledge of adjustments.
 
-Future phases can layer configurable Azan adjustments on top without modifying the astronomical calculation itself.
-
-Conceptually:
+A separate `PrayerAdjustmentService`/`PrayerAdjustments.apply()` layers the caller-supplied per-prayer minute offsets on top, producing `azan_times`. This keeps the astronomical calculation pure and independently testable, and matches the response distinction:
 
 ```text
 Calculated prayer time
@@ -773,23 +830,13 @@ Configured Azan adjustment
 Final Azan time
 ```
 
-This distinction should remain explicit in the architecture.
+Sunrise and sunset are calculated values only; they have no Azan and are never adjusted.
 
 ---
 
 # Planned future phases
 
 The project is intentionally being implemented incrementally.
-
-## Phase 4
-
-Planned areas:
-
-- Azan/time adjustments
-- calculated versus final Azan time distinction
-- richer response structure
-- production-oriented request behavior
-- additional validation where required
 
 ## Later phases
 
@@ -866,21 +913,24 @@ Maghrib   20:32
 Isha      21:57
 ```
 
-Phase 3:
+Phase 3 (as re-verified during this review):
 
 ```text
 pytest: 15 passed
 ruff check: passing
-ruff format --check: needs formatting cleanup
+ruff format --check: passing
 ```
 
-Before Phase 3 approval:
+Phase 4:
 
-```bash
-ruff format .
-pytest -q
-ruff check .
-ruff format --check .
+```text
+pytest: 19 passed, 2 warnings
+ruff check: passing
+ruff format --check: passing
+adhanpy: added to pyproject.toml dependencies (packaging bug fixed)
+manual verification: GET /api/v1/prayer-times exercised against a live
+  uvicorn instance with an isha_adjustment=90 offset; response confirmed
+  calculated_times.isha unchanged and azan_times.isha correctly offset
 ```
 
 ---
@@ -892,14 +942,15 @@ Each phase must be explicitly reviewed and approved before implementation of the
 Current state:
 
 ```text
-Phase 0: COMPLETE
+Phase 0: APPROVED
 Phase 1: APPROVED
 Phase 2: APPROVED
-Phase 3: IMPLEMENTATION COMPLETE, FINAL VERIFICATION PENDING
-Phase 4: NOT STARTED
+Phase 3: APPROVED (re-verified during this review)
+Phase 4: IMPLEMENTATION COMPLETE, PENDING APPROVAL
+Phase 5: NOT STARTED
 ```
 
-Do not begin Phase 4 until Phase 3 has been reviewed and explicitly approved.
+Do not begin Phase 5 until Phase 4 has been reviewed and explicitly approved.
 
 ---
 

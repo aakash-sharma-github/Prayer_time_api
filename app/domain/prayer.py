@@ -1,5 +1,5 @@
-from dataclasses import dataclass
-from datetime import date, datetime
+from dataclasses import dataclass, fields
+from datetime import date, datetime, timedelta
 from enum import Enum
 from zoneinfo import ZoneInfo
 
@@ -37,7 +37,9 @@ class PrayerCalculationRequest:
     timezone: ZoneInfo
     calculation_method: CalculationMethodName
     madhab: MadhabName = MadhabName.SHAFI
-    high_latitude_rule: HighLatitudeRuleName = HighLatitudeRuleName.MIDDLE_OF_THE_NIGHT
+    high_latitude_rule: HighLatitudeRuleName = (
+        HighLatitudeRuleName.MIDDLE_OF_THE_NIGHT
+    )
 
 
 @dataclass(frozen=True)
@@ -56,3 +58,29 @@ class PrayerTimesResult:
     sunset: datetime
     maghrib: datetime
     isha: datetime
+
+
+@dataclass(frozen=True)
+class PrayerAdjustments:
+    fajr: int = 0
+    dhuhr: int = 0
+    asr: int = 0
+    maghrib: int = 0
+    isha: int = 0
+
+    def apply(self, prayer_times: PrayerTimesResult) -> dict[str, datetime]:
+        values = {
+            "fajr": prayer_times.fajr,
+            "dhuhr": prayer_times.dhuhr,
+            "asr": prayer_times.asr,
+            "maghrib": prayer_times.maghrib,
+            "isha": prayer_times.isha,
+        }
+        adjustments = {
+            field.name: getattr(self, field.name) for field in fields(self)
+        }
+        return {
+            prayer_name: prayer_time
+            + timedelta(minutes=adjustments[prayer_name])
+            for prayer_name, prayer_time in values.items()
+        }
