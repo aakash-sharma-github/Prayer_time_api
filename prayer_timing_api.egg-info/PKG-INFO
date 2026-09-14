@@ -1,0 +1,7 @@
+Metadata-Version: 2.4
+Name: prayer-timing-api
+Version: 0.1.0
+Summary: Production-oriented Islamic prayer and Azan timing API
+Requires-Python: >=3.11
+Requires-Dist: fastapi<1.0,>=0.115
+Requires-Dist: uvicorn[standard]<1.0,>=0.30
