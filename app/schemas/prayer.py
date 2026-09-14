@@ -47,6 +47,4 @@ class PrayerTimesResponse(BaseModel):
     madhab: MadhabName
     high_latitude_rule: HighLatitudeRuleName
 
-    times: dict[str, str] = Field(
-        description="Prayer times formatted as local HH:MM values."
-    )
+    times: dict[str, str] = Field(description="Prayer times formatted as local HH:MM values.")
