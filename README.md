@@ -6,7 +6,7 @@ The service calculates prayer times from geographic coordinates, date, timezone,
 
 ## Project status
 
-Current phase: **Phase 8**
+Current phase: **Phase 9**
 
 Completed:
 
@@ -19,6 +19,7 @@ Completed:
 - Phase 6: v1 API contract finalization and documentation
 - Phase 7: inclusive multi-date prayer-times range endpoint
 - Phase 8: Home Assistant REST/YAML documentation and examples
+- Phase 9: production Docker containerization
 
 Phase 4 verification currently has:
 
@@ -770,6 +771,58 @@ They do not currently fail tests.
 
 ---
 
+# Phase 9: Docker containerization
+
+Phase 9 packages the existing API as one production-only Docker image. It does not
+change the HTTP API, calculation logic, Home Assistant examples, or v1 response
+contracts. It does not add Docker Compose, a reverse proxy, HTTPS, deployment,
+authentication, a database, or persistent storage.
+
+The image uses `python:3.12-slim`, installs runtime dependencies from
+`pyproject.toml`, writes logs to standard output/error, exposes port `8000`, runs as
+a non-root `appuser`, and checks the real `GET /health` endpoint.
+
+Build the local image:
+
+```bash
+docker build -t azanapi:latest .
+```
+
+Run it on the host's port 8000:
+
+```bash
+docker run --rm -p 8000:8000 -e LOG_LEVEL=INFO azanapi:latest
+```
+
+The container listens on `0.0.0.0:8000`; use `http://127.0.0.1:8000` from the host.
+In another terminal, verify health and the public API:
+
+```bash
+curl http://127.0.0.1:8000/health
+
+curl "http://127.0.0.1:8000/api/v1/prayer-times?latitude=25.2048&longitude=55.2708&timezone=Asia/Dubai&date=2026-09-15&calculation_method=dubai&madhab=shafi"
+
+curl "http://127.0.0.1:8000/api/v1/prayer-times/range?latitude=25.2048&longitude=55.2708&timezone=Asia/Dubai&start_date=2026-09-15&end_date=2026-09-17&calculation_method=dubai"
+```
+
+For detached verification, use a named container:
+
+```bash
+docker run -d --name azanapi-test -p 8000:8000 -e LOG_LEVEL=INFO azanapi:latest
+docker inspect --format='{{json .State.Health}}' azanapi-test
+docker exec azanapi-test id
+docker logs azanapi-test
+docker stop azanapi-test
+docker rm azanapi-test
+```
+
+The health check runs every 30 seconds after a 10-second start period. `LOG_LEVEL`
+accepts standard Python logging levels such as `DEBUG`, `INFO`, `WARNING`, or `ERROR`.
+It defaults to `INFO`, unless the existing `APP_DEBUG` setting is enabled. `.env`
+files and development artifacts are excluded from the image build context.
+
+---
+
 # Formatting and linting
 
 Run:
@@ -1103,10 +1156,11 @@ Phase 4: APPROVED
 Phase 5: APPROVED
 Phase 6: APPROVED
 Phase 7: APPROVED
-Phase 8: IMPLEMENTATION COMPLETE, PENDING APPROVAL
+Phase 8: APPROVED
+Phase 9: IMPLEMENTATION COMPLETE, PENDING APPROVAL
 ```
 
-Do not begin Phase 9 until Phase 8 has been reviewed and explicitly approved.
+Do not begin Phase 10 until Phase 9 has been reviewed and explicitly approved.
 
 ---
 
