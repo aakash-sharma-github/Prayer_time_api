@@ -37,9 +37,7 @@ class PrayerCalculationRequest:
     timezone: ZoneInfo
     calculation_method: CalculationMethodName
     madhab: MadhabName = MadhabName.SHAFI
-    high_latitude_rule: HighLatitudeRuleName = (
-        HighLatitudeRuleName.MIDDLE_OF_THE_NIGHT
-    )
+    high_latitude_rule: HighLatitudeRuleName = HighLatitudeRuleName.MIDDLE_OF_THE_NIGHT
 
 
 @dataclass(frozen=True)
@@ -62,11 +60,33 @@ class PrayerTimesResult:
 
 @dataclass(frozen=True)
 class PrayerAdjustments:
+    """Caller-supplied Azan offsets in whole minutes.
+
+    These offsets apply only to Fajr, Dhuhr, Asr, Maghrib, and Isha.
+    Sunrise and sunset are astronomical events and are never adjusted.
+    """
+
     fajr: int = 0
     dhuhr: int = 0
     asr: int = 0
     maghrib: int = 0
     isha: int = 0
+
+    MINUTES_MIN = -1440
+    MINUTES_MAX = 1440
+
+    def __post_init__(self) -> None:
+        for field in fields(self):
+            value = getattr(self, field.name)
+
+            if isinstance(value, bool) or not isinstance(value, int):
+                raise ValueError(f"{field.name} adjustment must be an integer number of minutes")
+
+            if not self.MINUTES_MIN <= value <= self.MINUTES_MAX:
+                raise ValueError(
+                    f"{field.name} adjustment must be between "
+                    f"{self.MINUTES_MIN} and {self.MINUTES_MAX} minutes"
+                )
 
     def apply(self, prayer_times: PrayerTimesResult) -> dict[str, datetime]:
         values = {
@@ -76,11 +96,9 @@ class PrayerAdjustments:
             "maghrib": prayer_times.maghrib,
             "isha": prayer_times.isha,
         }
-        adjustments = {
-            field.name: getattr(self, field.name) for field in fields(self)
-        }
+        adjustments = {field.name: getattr(self, field.name) for field in fields(self)}
+
         return {
-            prayer_name: prayer_time
-            + timedelta(minutes=adjustments[prayer_name])
+            prayer_name: prayer_time + timedelta(minutes=adjustments[prayer_name])
             for prayer_name, prayer_time in values.items()
         }

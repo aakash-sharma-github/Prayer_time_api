@@ -20,7 +20,6 @@ from app.schemas.prayer import (
 from app.services.prayer_adjustments import PrayerAdjustmentService
 from app.services.prayer_calculator import PrayerCalculator
 
-
 router = APIRouter(
     prefix="/api/v1",
     tags=["prayer times"],
@@ -33,23 +32,77 @@ _adjustment_service = PrayerAdjustmentService()
 @router.get(
     "/prayer-times",
     response_model=PrayerTimesResponse,
-    summary="Calculate prayer times",
+    summary="Calculate prayer times and optional Azan adjustments",
+    description=(
+        "Calculate astronomical prayer times for the requested coordinates and date. "
+        "The calculated_times values are never modified by Azan adjustments. "
+        "The five *_adjustment parameters add or subtract whole minutes from the "
+        "corresponding Azan time only. Sunrise and sunset cannot be adjusted."
+    ),
 )
 def get_prayer_times(
-    latitude: float = Query(..., ge=-90, le=90),
-    longitude: float = Query(..., ge=-180, le=180),
-    timezone: str = Query(..., description="IANA timezone, for example Asia/Dubai."),
-    date: date | None = Query(default=None),
-    calculation_method: CalculationMethodName = Query(...),
-    madhab: MadhabName = Query(default=MadhabName.SHAFI),
-    high_latitude_rule: HighLatitudeRuleName = Query(
-        default=HighLatitudeRuleName.MIDDLE_OF_THE_NIGHT
+    latitude: float = Query(
+        ...,
+        ge=-90,
+        le=90,
+        description="Decimal latitude from -90 to 90.",
     ),
-    fajr_adjustment: int = Query(default=0, ge=-1440, le=1440),
-    dhuhr_adjustment: int = Query(default=0, ge=-1440, le=1440),
-    asr_adjustment: int = Query(default=0, ge=-1440, le=1440),
-    maghrib_adjustment: int = Query(default=0, ge=-1440, le=1440),
-    isha_adjustment: int = Query(default=0, ge=-1440, le=1440),
+    longitude: float = Query(
+        ...,
+        ge=-180,
+        le=180,
+        description="Decimal longitude from -180 to 180.",
+    ),
+    timezone: str = Query(
+        ...,
+        description="IANA timezone, for example Asia/Dubai.",
+    ),
+    date: date | None = Query(
+        default=None,
+        description="Gregorian date. Defaults to today in the requested timezone.",
+    ),
+    calculation_method: CalculationMethodName = Query(
+        ...,
+        description="Islamic prayer calculation method.",
+    ),
+    madhab: MadhabName = Query(
+        default=MadhabName.SHAFI,
+        description="Madhab used for Asr calculation.",
+    ),
+    high_latitude_rule: HighLatitudeRuleName = Query(
+        default=HighLatitudeRuleName.MIDDLE_OF_THE_NIGHT,
+        description="Rule used when high-latitude adjustments are required.",
+    ),
+    fajr_adjustment: int = Query(
+        default=0,
+        ge=-1440,
+        le=1440,
+        description="Minutes added to Fajr Azan time. Sunrise is not adjustable.",
+    ),
+    dhuhr_adjustment: int = Query(
+        default=0,
+        ge=-1440,
+        le=1440,
+        description="Minutes added to Dhuhr Azan time.",
+    ),
+    asr_adjustment: int = Query(
+        default=0,
+        ge=-1440,
+        le=1440,
+        description="Minutes added to Asr Azan time.",
+    ),
+    maghrib_adjustment: int = Query(
+        default=0,
+        ge=-1440,
+        le=1440,
+        description="Minutes added to Maghrib Azan time.",
+    ),
+    isha_adjustment: int = Query(
+        default=0,
+        ge=-1440,
+        le=1440,
+        description="Minutes added to Isha Azan time.",
+    ),
 ) -> PrayerTimesResponse:
     try:
         requested_timezone = ZoneInfo(timezone)

@@ -1,6 +1,8 @@
 from datetime import date
 from zoneinfo import ZoneInfo
 
+import pytest
+
 from app.domain.prayer import (
     CalculationMethodName,
     HighLatitudeRuleName,
@@ -29,6 +31,7 @@ def test_zero_adjustments_preserve_calculated_times() -> None:
     service = PrayerAdjustmentService()
     result = calculator.calculate(make_request())
     adjusted = service.apply(result, PrayerAdjustments())
+
     assert adjusted["fajr"] == result.fajr
     assert adjusted["dhuhr"] == result.dhuhr
     assert adjusted["asr"] == result.asr
@@ -40,10 +43,12 @@ def test_positive_adjustments_are_applied_in_minutes() -> None:
     calculator = PrayerCalculator()
     service = PrayerAdjustmentService()
     result = calculator.calculate(make_request())
+
     adjusted = service.apply(
         result,
         PrayerAdjustments(fajr=2, dhuhr=1, asr=2, maghrib=1, isha=3),
     )
+
     assert adjusted["fajr"].strftime("%H:%M") == "04:44"
     assert adjusted["dhuhr"].strftime("%H:%M") == "13:22"
     assert adjusted["asr"].strftime("%H:%M") == "18:24"
@@ -55,10 +60,12 @@ def test_negative_adjustments_are_applied_in_minutes() -> None:
     calculator = PrayerCalculator()
     service = PrayerAdjustmentService()
     result = calculator.calculate(make_request())
+
     adjusted = service.apply(
         result,
         PrayerAdjustments(fajr=-2, dhuhr=-1, asr=-2, maghrib=-1, isha=-3),
     )
+
     assert adjusted["fajr"].strftime("%H:%M") == "04:40"
     assert adjusted["dhuhr"].strftime("%H:%M") == "13:20"
     assert adjusted["asr"].strftime("%H:%M") == "18:20"
@@ -70,10 +77,52 @@ def test_adjustments_do_not_include_sunrise_or_sunset() -> None:
     calculator = PrayerCalculator()
     service = PrayerAdjustmentService()
     result = calculator.calculate(make_request())
+
     adjusted = service.apply(
         result,
-        PrayerAdjustments(fajr=10, dhuhr=10, asr=10, maghrib=10, isha=10),
+        PrayerAdjustments(
+            fajr=10,
+            dhuhr=10,
+            asr=10,
+            maghrib=10,
+            isha=10,
+        ),
     )
+
     assert set(adjusted) == {"fajr", "dhuhr", "asr", "maghrib", "isha"}
     assert result.sunrise.strftime("%H:%M") == "06:08"
     assert result.sunset.strftime("%H:%M") == "20:32"
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("fajr", 1441),
+        ("dhuhr", -1441),
+        ("asr", 1441),
+        ("maghrib", -1441),
+        ("isha", 1441),
+    ],
+)
+def test_adjustment_domain_validation_rejects_out_of_range_values(
+    field: str,
+    value: int,
+) -> None:
+    with pytest.raises(ValueError, match=field):
+        PrayerAdjustments(**{field: value})
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("fajr", 1.5),
+        ("dhuhr", "5"),
+        ("asr", True),
+    ],
+)
+def test_adjustment_domain_validation_requires_integer_values(
+    field: str,
+    value: object,
+) -> None:
+    with pytest.raises(ValueError, match=field):
+        PrayerAdjustments(**{field: value})

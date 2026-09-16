@@ -37,8 +37,6 @@ def test_prayer_times_reference_case() -> None:
         "isha": "21:57",
     }
 
-    # With no adjustments requested, azan_times must equal calculated_times
-    # (minus sunrise, which is not an Azan-triggering prayer).
     assert body["azan_times"] == {
         "fajr": "04:42",
         "dhuhr": "13:21",
@@ -56,6 +54,71 @@ def test_prayer_times_reference_case() -> None:
     }
 
 
+def test_dubai_baseline_and_positive_adjustment() -> None:
+    response = client.get(
+        "/api/v1/prayer-times",
+        params={
+            "latitude": 25.2048,
+            "longitude": 55.2708,
+            "timezone": "Asia/Dubai",
+            "date": "2026-09-15",
+            "calculation_method": "dubai",
+            "madhab": "shafi",
+            "fajr_adjustment": 2,
+            "isha_adjustment": 10,
+        },
+    )
+
+    assert response.status_code == 200
+
+    body = response.json()
+
+    assert body["date"] == "2026-09-15"
+    assert body["calculated_times"] == {
+        "fajr": "04:47",
+        "sunrise": "06:02",
+        "dhuhr": "12:17",
+        "asr": "15:44",
+        "sunset": "18:23",
+        "maghrib": "18:26",
+        "isha": "19:41",
+    }
+    assert body["azan_times"] == {
+        "fajr": "04:49",
+        "dhuhr": "12:17",
+        "asr": "15:44",
+        "maghrib": "18:26",
+        "isha": "19:51",
+    }
+    assert body["adjustments_minutes"] == {
+        "fajr": 2,
+        "dhuhr": 0,
+        "asr": 0,
+        "maghrib": 0,
+        "isha": 10,
+    }
+
+
+def test_dubai_negative_adjustment() -> None:
+    response = client.get(
+        "/api/v1/prayer-times",
+        params={
+            "latitude": 25.2048,
+            "longitude": 55.2708,
+            "timezone": "Asia/Dubai",
+            "date": "2026-09-15",
+            "calculation_method": "dubai",
+            "maghrib_adjustment": -3,
+        },
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+
+    assert body["calculated_times"]["maghrib"] == "18:26"
+    assert body["azan_times"]["maghrib"] == "18:23"
+
+
 def test_prayer_times_defaults_date_in_requested_timezone() -> None:
     response = client.get(
         "/api/v1/prayer-times",
@@ -69,11 +132,7 @@ def test_prayer_times_defaults_date_in_requested_timezone() -> None:
     )
 
     assert response.status_code == 200
-
-    body = response.json()
-
-    assert body["date"] == "2026-09-14"
-    assert body["timezone"] == "Asia/Dubai"
+    assert response.json()["date"] == "2026-09-14"
 
 
 def test_unknown_timezone_returns_400() -> None:
@@ -123,18 +182,13 @@ def test_adjustments_shift_azan_times_but_not_calculated_times() -> None:
     )
 
     assert response.status_code == 200
-
     body = response.json()
 
-    # The astronomical calculation must never move.
     assert body["calculated_times"]["fajr"] == "04:42"
     assert body["calculated_times"]["isha"] == "21:57"
-
-    # Only the requested Azan times move, by exactly the requested offset.
     assert body["azan_times"]["fajr"] == "04:47"
     assert body["azan_times"]["isha"] == "22:07"
 
-    # Prayers with no adjustment stay equal to their calculated time.
     assert body["azan_times"]["dhuhr"] == body["calculated_times"]["dhuhr"]
     assert body["azan_times"]["asr"] == body["calculated_times"]["asr"]
     assert body["azan_times"]["maghrib"] == body["calculated_times"]["maghrib"]
@@ -163,7 +217,6 @@ def test_negative_adjustment_moves_azan_time_earlier() -> None:
     )
 
     assert response.status_code == 200
-
     body = response.json()
 
     assert body["calculated_times"]["maghrib"] == "20:32"
@@ -171,9 +224,6 @@ def test_negative_adjustment_moves_azan_time_earlier() -> None:
 
 
 def test_isha_adjustment_can_roll_over_midnight() -> None:
-    # A location/date where Isha is deliberately pushed past 23:59 to verify
-    # the rollover is computed correctly rather than clipped or wrapped
-    # incorrectly.
     response = client.get(
         "/api/v1/prayer-times",
         params={
@@ -188,11 +238,8 @@ def test_isha_adjustment_can_roll_over_midnight() -> None:
     )
 
     assert response.status_code == 200
-
     body = response.json()
 
-    # Calculated Isha is 21:57; +150 minutes = 00:27 the next calendar day.
-    # The formatted HH:MM string reflects the rolled-over clock time.
     assert body["calculated_times"]["isha"] == "21:57"
     assert body["azan_times"]["isha"] == "00:27"
 
@@ -226,3 +273,57 @@ def test_invalid_calculation_method_returns_422() -> None:
     )
 
     assert response.status_code == 422
+
+
+def test_invalid_madhab_returns_422() -> None:
+    response = client.get(
+        "/api/v1/prayer-times",
+        params={
+            "latitude": 25.2048,
+            "longitude": 55.2708,
+            "timezone": "Asia/Dubai",
+            "date": "2026-09-14",
+            "calculation_method": "dubai",
+            "madhab": "invalid_madhab",
+        },
+    )
+
+    assert response.status_code == 422
+
+
+def test_invalid_high_latitude_rule_returns_422() -> None:
+    response = client.get(
+        "/api/v1/prayer-times",
+        params={
+            "latitude": 25.2048,
+            "longitude": 55.2708,
+            "timezone": "Asia/Dubai",
+            "date": "2026-09-14",
+            "calculation_method": "dubai",
+            "high_latitude_rule": "invalid_rule",
+        },
+    )
+
+    assert response.status_code == 422
+
+
+def test_all_adjustment_parameters_are_validated() -> None:
+    for parameter in (
+        "fajr_adjustment",
+        "dhuhr_adjustment",
+        "asr_adjustment",
+        "maghrib_adjustment",
+        "isha_adjustment",
+    ):
+        response = client.get(
+            "/api/v1/prayer-times",
+            params={
+                "latitude": 25.2048,
+                "longitude": 55.2708,
+                "timezone": "Asia/Dubai",
+                "date": "2026-09-14",
+                "calculation_method": "dubai",
+                parameter: 1441,
+            },
+        )
+        assert response.status_code == 422

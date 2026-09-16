@@ -15,6 +15,8 @@ class CoordinatesResponse(BaseModel):
 
 
 class CalculatedTimesResponse(BaseModel):
+    """Astronomically calculated prayer and solar-event times."""
+
     fajr: str
     sunrise: str
     dhuhr: str
@@ -25,6 +27,8 @@ class CalculatedTimesResponse(BaseModel):
 
 
 class AzanTimesResponse(BaseModel):
+    """Final Azan times after caller-supplied minute adjustments."""
+
     fajr: str
     dhuhr: str
     asr: str
@@ -33,11 +37,13 @@ class AzanTimesResponse(BaseModel):
 
 
 class PrayerAdjustmentsResponse(BaseModel):
-    fajr: int
-    dhuhr: int
-    asr: int
-    maghrib: int
-    isha: int
+    """Explicit Azan offsets supplied by the caller, in minutes."""
+
+    fajr: int = Field(ge=-1440, le=1440)
+    dhuhr: int = Field(ge=-1440, le=1440)
+    asr: int = Field(ge=-1440, le=1440)
+    maghrib: int = Field(ge=-1440, le=1440)
+    isha: int = Field(ge=-1440, le=1440)
 
 
 class PrayerTimesResponse(BaseModel):
@@ -86,8 +92,22 @@ class PrayerTimesResponse(BaseModel):
     calculation_method: CalculationMethodName
     madhab: MadhabName
     high_latitude_rule: HighLatitudeRuleName
-    calculated_times: CalculatedTimesResponse
-    azan_times: AzanTimesResponse
+    calculated_times: CalculatedTimesResponse = Field(
+        description=(
+            "Prayer and solar-event times calculated by the astronomical engine. "
+            "These values are not changed by Azan adjustments."
+        )
+    )
+    azan_times: AzanTimesResponse = Field(
+        description=(
+            "Final Azan times after the caller's per-prayer minute adjustments. "
+            "Sunrise and sunset are excluded because they are not Azan prayers."
+        )
+    )
     adjustments_minutes: PrayerAdjustmentsResponse = Field(
-        description="Per-prayer Azan adjustments in minutes."
+        description=(
+            "Per-prayer Azan adjustments in minutes. "
+            "Allowed prayers: Fajr, Dhuhr, Asr, Maghrib, and Isha. "
+            "Sunrise and sunset cannot be adjusted. Range: -1440 to 1440."
+        )
     )
