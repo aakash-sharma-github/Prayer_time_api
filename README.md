@@ -6,7 +6,7 @@ The service calculates prayer times from geographic coordinates, date, timezone,
 
 ## Project status
 
-Current phase: **Phase 5**
+Current phase: **Phase 6**
 
 Completed:
 
@@ -16,6 +16,7 @@ Completed:
 - Phase 3: public FastAPI prayer-times endpoint
 - Phase 4: calculated-vs-Azan time distinction and configurable per-prayer adjustments
 - Phase 5: predictable API error responses and validation-error handling
+- Phase 6: v1 API contract finalization and documentation
 
 Phase 4 verification currently has:
 
@@ -604,6 +605,83 @@ Both response types are documented on `GET /api/v1/prayer-times` in OpenAPI.
 
 ---
 
+# Phase 6: v1 API contract and documentation
+
+Phase 6 finalizes the public v1 contract before any deployment or infrastructure work.
+The interactive contract is available at `/docs`, with the machine-readable OpenAPI
+document at `/openapi.json`. The rules below are the authoritative human-readable
+summary of that same contract.
+
+## v1 endpoint contract
+
+`GET /api/v1/prayer-times` calculates one day's prayer times for explicitly supplied
+coordinates, timezone, and calculation method. It has no side effects and does not
+persist request data.
+
+| Parameter | Required | Type and allowed values | Default |
+|---|---:|---|---|
+| `latitude` | yes | Number from `-90` through `90` | — |
+| `longitude` | yes | Number from `-180` through `180` | — |
+| `timezone` | yes | Valid IANA timezone, e.g. `Asia/Dubai` | — |
+| `date` | no | Gregorian `YYYY-MM-DD` date | Today in the requested timezone |
+| `calculation_method` | yes | One of the supported calculation methods | — |
+| `madhab` | no | `shafi`, `hanafi` | `shafi` |
+| `high_latitude_rule` | no | `middle_of_the_night`, `seventh_of_the_night`, `twilight_angle` | `middle_of_the_night` |
+| `fajr_adjustment` | no | Whole minutes from `-1440` through `1440` | `0` |
+| `dhuhr_adjustment` | no | Whole minutes from `-1440` through `1440` | `0` |
+| `asr_adjustment` | no | Whole minutes from `-1440` through `1440` | `0` |
+| `maghrib_adjustment` | no | Whole minutes from `-1440` through `1440` | `0` |
+| `isha_adjustment` | no | Whole minutes from `-1440` through `1440` | `0` |
+
+The accepted calculation methods are: `muslim_world_league`, `egyptian`, `karachi`,
+`umm_al_qura`, `dubai`, `moon_sighting_committee`, `north_america`, `kuwait`,
+`qatar`, `singapore`, and `uoif`.
+
+A successful `200` response contains the requested date/timezone and coordinates,
+the selected calculation options, immutable astronomical `calculated_times`, adjusted
+`azan_times`, and the supplied `adjustments_minutes`. All time values are local
+`HH:MM` strings. `calculated_times` has Fajr, Sunrise, Dhuhr, Asr, Sunset, Maghrib,
+and Isha; `azan_times` has only Fajr, Dhuhr, Asr, Maghrib, and Isha. Sunrise and
+sunset are never adjustable.
+
+Example request:
+
+```bash
+curl --get http://127.0.0.1:8000/api/v1/prayer-times \
+  --data-urlencode latitude=25.2048 \
+  --data-urlencode longitude=55.2708 \
+  --data-urlencode timezone=Asia/Dubai \
+  --data-urlencode date=2026-09-14 \
+  --data-urlencode calculation_method=dubai \
+  --data-urlencode isha_adjustment=90
+```
+
+For a complete successful response example, see the [Azan adjustments](#phase-4-calculated-vs-azan-time-and-configurable-adjustments)
+section above or the `200` response example in `/docs`.
+
+`400` means a syntactically valid request could not be calculated, such as an unknown
+IANA timezone. `422` means one or more input values failed validation. Both use the
+top-level `error` envelope documented in [Validation and errors](#validation-and-errors);
+only `422` includes the per-field `details` list.
+
+## Versioning rules
+
+The `/api/v1` prefix is part of the public contract. Additive, backward-compatible
+documentation or optional capabilities may be introduced within v1 only when they do
+not alter existing meanings, defaults, validation behavior, response fields, or error
+envelopes. Removing or renaming a field, changing a field type or meaning, changing a
+default/range/enum, or changing an error shape requires a new versioned path such as
+`/api/v2/...`. Existing v1 behavior remains supported for its published lifetime.
+
+The OpenAPI contract tests in `tests/test_openapi_contract.py`, alongside endpoint
+behavior tests, are required checks for v1 changes. Update them deliberately whenever
+an explicitly approved contract change is made.
+
+Phase 6 intentionally adds no Docker, VPS, HTTPS, reverse proxy, authentication,
+database, caching, Home Assistant integration, or monthly/yearly endpoints.
+
+---
+
 # Testing
 
 Run the complete suite:
@@ -612,13 +690,15 @@ Run the complete suite:
 pytest -q
 ```
 
-Current Phase 4 result:
+Current Phase 6 result:
 
 ```text
 19 passed, 2 warnings
 ```
 
-The four tests added in Phase 4 cover: a positive adjustment applied to two different prayers while confirming untouched prayers and `calculated_times` stay fixed, a negative adjustment, midnight rollover behavior for a large Isha adjustment, and out-of-range adjustment rejection (422).
+The Phase 6 OpenAPI contract tests protect the endpoint path, parameters, defaults,
+validation ranges, response schemas, and success/error examples. Existing API tests
+verify the documented endpoint behavior.
 
 The warnings are from the current FastAPI/Starlette test-client dependency stack:
 
@@ -856,18 +936,15 @@ The project is intentionally being implemented incrementally.
 
 ## Later phases
 
-Potential future work includes:
+The following is a proposed roadmap only. Each phase requires separate definition and
+approval before implementation:
 
-- monthly prayer times
-- yearly prayer times
-- additional query capabilities
-- production logging improvements
-- Docker
-- HTTPS deployment
-- VPS deployment
-- Home Assistant integration
-- operational health/readiness behavior
-- production security configuration
+1. Phase 7: extended date/range endpoints
+2. Phase 8: Home Assistant integration
+3. Phase 9: Docker/containerization
+4. Phase 10: VPS deployment and HTTPS
+5. Phase 11: production observability and security
+6. Phase 12: final production testing and release
 
 No database is planned until a concrete requirement exists.
 
@@ -963,10 +1040,11 @@ Phase 1: APPROVED
 Phase 2: APPROVED
 Phase 3: APPROVED (re-verified during this review)
 Phase 4: APPROVED
-Phase 5: IMPLEMENTATION COMPLETE, PENDING APPROVAL
+Phase 5: APPROVED
+Phase 6: IMPLEMENTATION COMPLETE, PENDING APPROVAL
 ```
 
-Do not begin Phase 6 until Phase 5 has been reviewed and explicitly approved.
+Do not begin Phase 7 until Phase 6 has been reviewed and explicitly approved.
 
 ---
 

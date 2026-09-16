@@ -24,7 +24,7 @@ from app.services.prayer_calculator import PrayerCalculator
 
 router = APIRouter(
     prefix="/api/v1",
-    tags=["prayer times"],
+    tags=["Prayer times"],
 )
 
 _calculator = PrayerCalculator()
@@ -35,6 +35,10 @@ _adjustment_service = PrayerAdjustmentService()
     "/prayer-times",
     response_model=PrayerTimesResponse,
     summary="Calculate prayer times and optional Azan adjustments",
+    response_description=(
+        "Prayer times in the requested timezone, with immutable calculated times and "
+        "separately adjusted Azan times."
+    ),
     description=(
         "Calculate astronomical prayer times for the requested coordinates and date. "
         "The calculated_times values are never modified by Azan adjustments. "
@@ -45,10 +49,37 @@ _adjustment_service = PrayerAdjustmentService()
         400: {
             "description": "The request is valid but cannot be calculated.",
             "model": ErrorResponse,
+            "content": {
+                "application/json": {
+                    "example": {
+                        "error": {
+                            "code": "INVALID_TIMEZONE",
+                            "message": "Unknown IANA timezone: Not/ARealTimezone",
+                        }
+                    }
+                }
+            },
         },
         422: {
             "description": "One or more request parameters are invalid.",
             "model": ValidationErrorResponse,
+            "content": {
+                "application/json": {
+                    "example": {
+                        "error": {
+                            "code": "VALIDATION_ERROR",
+                            "message": "Request validation failed.",
+                            "details": [
+                                {
+                                    "field": "query.latitude",
+                                    "message": "Input should be less than or equal to 90",
+                                    "type": "less_than_equal",
+                                }
+                            ],
+                        }
+                    }
+                }
+            },
         },
     },
 )
@@ -58,24 +89,29 @@ def get_prayer_times(
         ge=-90,
         le=90,
         description="Decimal latitude from -90 to 90.",
+        examples=[25.2048],
     ),
     longitude: float = Query(
         ...,
         ge=-180,
         le=180,
         description="Decimal longitude from -180 to 180.",
+        examples=[55.2708],
     ),
     timezone: str = Query(
         ...,
         description="IANA timezone, for example Asia/Dubai.",
+        examples=["Asia/Dubai"],
     ),
     date: date | None = Query(
         default=None,
         description="Gregorian date. Defaults to today in the requested timezone.",
+        examples=["2026-09-14"],
     ),
     calculation_method: CalculationMethodName = Query(
         ...,
         description="Islamic prayer calculation method.",
+        examples=["dubai"],
     ),
     madhab: MadhabName = Query(
         default=MadhabName.SHAFI,

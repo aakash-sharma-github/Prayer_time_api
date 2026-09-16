@@ -2,6 +2,8 @@ from pydantic import BaseModel, ConfigDict
 
 
 class ErrorDetail(BaseModel):
+    """A stable, machine-readable API error."""
+
     code: str
     message: str
 
@@ -22,6 +24,8 @@ class ErrorResponse(BaseModel):
 
 
 class ValidationErrorDetail(BaseModel):
+    """One invalid request input reported with its FastAPI location."""
+
     field: str
     message: str
     type: str

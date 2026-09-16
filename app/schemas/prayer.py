@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date as Date
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -10,6 +10,8 @@ from app.domain.prayer import (
 
 
 class CoordinatesResponse(BaseModel):
+    """The geographic coordinates used for the calculation."""
+
     latitude: float
     longitude: float
 
@@ -47,6 +49,8 @@ class PrayerAdjustmentsResponse(BaseModel):
 
 
 class PrayerTimesResponse(BaseModel):
+    """The stable v1 response for a single location and calendar date."""
+
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
@@ -86,12 +90,16 @@ class PrayerTimesResponse(BaseModel):
         }
     )
 
-    date: date
-    timezone: str
-    coordinates: CoordinatesResponse
-    calculation_method: CalculationMethodName
-    madhab: MadhabName
-    high_latitude_rule: HighLatitudeRuleName
+    date: Date = Field(description="Gregorian calculation date in the requested timezone.")
+    timezone: str = Field(description="IANA timezone used for the calculation.")
+    coordinates: CoordinatesResponse = Field(description="Coordinates used for the calculation.")
+    calculation_method: CalculationMethodName = Field(
+        description="Calculation method that was used."
+    )
+    madhab: MadhabName = Field(description="Madhab used for the Asr calculation.")
+    high_latitude_rule: HighLatitudeRuleName = Field(
+        description="High-latitude rule used for the calculation."
+    )
     calculated_times: CalculatedTimesResponse = Field(
         description=(
             "Prayer and solar-event times calculated by the astronomical engine. "
