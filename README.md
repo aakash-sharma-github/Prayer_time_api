@@ -6,7 +6,7 @@ The service calculates prayer times from geographic coordinates, date, timezone,
 
 ## Project status
 
-Current phase: **Phase 4**
+Current phase: **Phase 5**
 
 Completed:
 
@@ -15,6 +15,7 @@ Completed:
 - Phase 2: verified prayer calculation engine
 - Phase 3: public FastAPI prayer-times endpoint
 - Phase 4: calculated-vs-Azan time distinction and configurable per-prayer adjustments
+- Phase 5: predictable API error responses and validation-error handling
 
 Phase 4 verification currently has:
 
@@ -564,27 +565,42 @@ Longitude is constrained to:
 -180 <= longitude <= 180
 ```
 
-Invalid FastAPI/Pydantic request parameters return:
+Every error response has a top-level `error` object with a stable machine-readable
+`code` and a human-readable `message`.
 
-```text
-HTTP 422
-```
-
-Unknown IANA timezones return:
-
-```text
-HTTP 400
-```
-
-Example:
+Invalid FastAPI/Pydantic request parameters return HTTP 422:
 
 ```json
 {
-  "detail": "Unknown IANA timezone: Not/ARealTimezone"
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Request validation failed.",
+    "details": [
+      {
+        "field": "query.latitude",
+        "message": "Input should be less than or equal to 90",
+        "type": "less_than_equal"
+      }
+    ]
+  }
 }
 ```
 
-Calculation-layer `ValueError` conditions are converted into HTTP 400 responses.
+The `details` list identifies every invalid request field. Its `field` value uses
+the FastAPI request location followed by the field name, such as `query.latitude`.
+
+Unknown IANA timezones and calculation-layer errors return HTTP 400. Example:
+
+```json
+{
+  "error": {
+    "code": "INVALID_TIMEZONE",
+    "message": "Unknown IANA timezone: Not/ARealTimezone"
+  }
+}
+```
+
+Both response types are documented on `GET /api/v1/prayer-times` in OpenAPI.
 
 ---
 
@@ -946,11 +962,11 @@ Phase 0: APPROVED
 Phase 1: APPROVED
 Phase 2: APPROVED
 Phase 3: APPROVED (re-verified during this review)
-Phase 4: IMPLEMENTATION COMPLETE, PENDING APPROVAL
-Phase 5: NOT STARTED
+Phase 4: APPROVED
+Phase 5: IMPLEMENTATION COMPLETE, PENDING APPROVAL
 ```
 
-Do not begin Phase 5 until Phase 4 has been reviewed and explicitly approved.
+Do not begin Phase 6 until Phase 5 has been reviewed and explicitly approved.
 
 ---
 

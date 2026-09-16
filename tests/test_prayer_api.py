@@ -5,6 +5,25 @@ from app.main import app
 client = TestClient(app)
 
 
+def assert_validation_error(
+    response,
+    *,
+    field: str,
+    error_type: str,
+) -> None:
+    assert response.status_code == 422
+
+    body = response.json()
+    assert body["error"]["code"] == "VALIDATION_ERROR"
+    assert body["error"]["message"] == "Request validation failed."
+    assert len(body["error"]["details"]) == 1
+
+    detail = body["error"]["details"][0]
+    assert detail["field"] == field
+    assert detail["type"] == error_type
+    assert detail["message"]
+
+
 def test_prayer_times_reference_case() -> None:
     response = client.get(
         "/api/v1/prayer-times",
@@ -148,7 +167,12 @@ def test_unknown_timezone_returns_400() -> None:
     )
 
     assert response.status_code == 400
-    assert "Unknown IANA timezone" in response.json()["detail"]
+    assert response.json() == {
+        "error": {
+            "code": "INVALID_TIMEZONE",
+            "message": "Unknown IANA timezone: Not/ARealTimezone",
+        }
+    }
 
 
 def test_invalid_coordinates_return_422() -> None:
@@ -163,7 +187,11 @@ def test_invalid_coordinates_return_422() -> None:
         },
     )
 
-    assert response.status_code == 422
+    assert_validation_error(
+        response,
+        field="query.latitude",
+        error_type="less_than_equal",
+    )
 
 
 def test_adjustments_shift_azan_times_but_not_calculated_times() -> None:
@@ -257,7 +285,11 @@ def test_adjustment_out_of_range_returns_422() -> None:
         },
     )
 
-    assert response.status_code == 422
+    assert_validation_error(
+        response,
+        field="query.fajr_adjustment",
+        error_type="less_than_equal",
+    )
 
 
 def test_invalid_calculation_method_returns_422() -> None:
@@ -272,7 +304,11 @@ def test_invalid_calculation_method_returns_422() -> None:
         },
     )
 
-    assert response.status_code == 422
+    assert_validation_error(
+        response,
+        field="query.calculation_method",
+        error_type="enum",
+    )
 
 
 def test_invalid_madhab_returns_422() -> None:

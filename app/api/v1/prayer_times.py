@@ -1,8 +1,9 @@
 from datetime import date, datetime
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Query
 
+from app.api.errors import APIError
 from app.domain.prayer import (
     CalculationMethodName,
     HighLatitudeRuleName,
@@ -10,6 +11,7 @@ from app.domain.prayer import (
     PrayerAdjustments,
     PrayerCalculationRequest,
 )
+from app.schemas.errors import ErrorResponse, ValidationErrorResponse
 from app.schemas.prayer import (
     AzanTimesResponse,
     CalculatedTimesResponse,
@@ -39,6 +41,16 @@ _adjustment_service = PrayerAdjustmentService()
         "The five *_adjustment parameters add or subtract whole minutes from the "
         "corresponding Azan time only. Sunrise and sunset cannot be adjusted."
     ),
+    responses={
+        400: {
+            "description": "The request is valid but cannot be calculated.",
+            "model": ErrorResponse,
+        },
+        422: {
+            "description": "One or more request parameters are invalid.",
+            "model": ValidationErrorResponse,
+        },
+    },
 )
 def get_prayer_times(
     latitude: float = Query(
@@ -107,9 +119,10 @@ def get_prayer_times(
     try:
         requested_timezone = ZoneInfo(timezone)
     except ZoneInfoNotFoundError as exc:
-        raise HTTPException(
+        raise APIError(
+            code="INVALID_TIMEZONE",
+            message=f"Unknown IANA timezone: {timezone}",
             status_code=400,
-            detail=f"Unknown IANA timezone: {timezone}",
         ) from exc
 
     requested_date = date or datetime.now(requested_timezone).date()
@@ -127,7 +140,11 @@ def get_prayer_times(
     try:
         result = _calculator.calculate(request)
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        raise APIError(
+            code="INVALID_CALCULATION",
+            message=str(exc),
+            status_code=400,
+        ) from exc
 
     adjustments = PrayerAdjustments(
         fajr=fajr_adjustment,
