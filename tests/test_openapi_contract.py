@@ -107,3 +107,51 @@ def test_v1_openapi_documents_success_and_error_schemas_and_examples() -> None:
     assert components["PrayerTimesResponse"]["example"]["azan_times"]["isha"] == "21:57"
     assert components["ErrorResponse"]["example"]["error"]["code"] == "INVALID_TIMEZONE"
     assert components["ValidationErrorResponse"]["example"]["error"]["details"]
+
+
+def test_v1_range_openapi_contract_is_documented() -> None:
+    schema = app.openapi()
+    operation = schema["paths"]["/api/v1/prayer-times/range"]["get"]
+    parameters = {parameter["name"]: parameter for parameter in operation["parameters"]}
+
+    assert operation["summary"] == "Calculate prayer times for an inclusive date range"
+    assert operation["tags"] == ["Prayer times"]
+    assert set(operation["responses"]) == {"200", "400", "422"}
+    assert set(parameters) == {
+        "latitude",
+        "longitude",
+        "timezone",
+        "start_date",
+        "end_date",
+        "calculation_method",
+        "madhab",
+        "high_latitude_rule",
+        "fajr_adjustment",
+        "dhuhr_adjustment",
+        "asr_adjustment",
+        "maghrib_adjustment",
+        "isha_adjustment",
+    }
+    assert parameters["start_date"]["required"] is True
+    assert parameters["end_date"]["required"] is True
+    assert parameters["latitude"]["schema"]["minimum"] == -90
+    assert parameters["latitude"]["schema"]["maximum"] == 90
+
+    for name in (
+        "fajr_adjustment",
+        "dhuhr_adjustment",
+        "asr_adjustment",
+        "maghrib_adjustment",
+        "isha_adjustment",
+    ):
+        assert parameters[name]["schema"]["default"] == 0
+        assert parameters[name]["schema"]["minimum"] == -1440
+        assert parameters[name]["schema"]["maximum"] == 1440
+
+    responses = operation["responses"]
+    assert responses["200"]["content"]["application/json"]["schema"] == {
+        "$ref": "#/components/schemas/PrayerTimesRangeResponse"
+    }
+    examples = responses["400"]["content"]["application/json"]["examples"]
+    assert examples["invalid_date_range"]["value"]["error"]["code"] == "INVALID_DATE_RANGE"
+    assert examples["date_range_too_large"]["value"]["error"]["code"] == "DATE_RANGE_TOO_LARGE"

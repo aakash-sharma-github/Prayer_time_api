@@ -6,7 +6,7 @@ The service calculates prayer times from geographic coordinates, date, timezone,
 
 ## Project status
 
-Current phase: **Phase 6**
+Current phase: **Phase 8**
 
 Completed:
 
@@ -17,6 +17,8 @@ Completed:
 - Phase 4: calculated-vs-Azan time distinction and configurable per-prayer adjustments
 - Phase 5: predictable API error responses and validation-error handling
 - Phase 6: v1 API contract finalization and documentation
+- Phase 7: inclusive multi-date prayer-times range endpoint
+- Phase 8: Home Assistant REST/YAML documentation and examples
 
 Phase 4 verification currently has:
 
@@ -682,6 +684,65 @@ database, caching, Home Assistant integration, or monthly/yearly endpoints.
 
 ---
 
+# Phase 7: date-range prayer times
+
+`GET /api/v1/prayer-times/range` returns independently calculated prayer times for
+an inclusive local-date range while leaving `GET /api/v1/prayer-times` unchanged.
+It accepts the same location, calculation, and Azan-adjustment options as the
+single-day endpoint, replacing `date` with required `start_date` and `end_date`
+(`YYYY-MM-DD`).
+
+The range must contain between one and 366 dates, inclusive. Results are always
+chronological and each date is calculated separately using the requested timezone;
+the API does not derive a range from a UTC sequence. A reversed range returns:
+
+```json
+{
+  "error": {
+    "code": "INVALID_DATE_RANGE",
+    "message": "start_date must be on or before end_date"
+  }
+}
+```
+
+More than 366 requested dates returns `400` with `DATE_RANGE_TOO_LARGE`. The
+response repeats shared request configuration once at the top level, including
+`adjustments_minutes`; every `days` entry contains only `date`, `calculated_times`,
+and `azan_times`. Adjustment semantics—including non-adjustable sunrise/sunset and
+possible bare-`HH:MM` midnight rollover—are unchanged from the single-day contract.
+
+Example:
+
+```bash
+curl --get http://127.0.0.1:8000/api/v1/prayer-times/range \
+  --data-urlencode latitude=25.2048 \
+  --data-urlencode longitude=55.2708 \
+  --data-urlencode timezone=Asia/Dubai \
+  --data-urlencode start_date=2026-09-15 \
+  --data-urlencode end_date=2026-09-17 \
+  --data-urlencode calculation_method=dubai
+```
+
+The full range schema and success/error examples are available in `/docs` and
+`/openapi.json`. Phase 7 does not add monthly/yearly endpoints, pagination,
+exports, caching, background jobs, authentication, location lookup, new calculation
+methods, or deployment infrastructure.
+
+---
+
+# Phase 8: Home Assistant REST/YAML examples
+
+Phase 8 documents Home Assistant as a standard HTTP client of azanAPI. It adds no
+custom Home Assistant component, Python code, config flow, HACS repository, or
+Home Assistant dependency to the application.
+
+See [Home Assistant integration](docs/home-assistant.md) for the full setup guide,
+and [examples/home-assistant](examples/home-assistant) for copy/paste-ready REST
+sensor and automation YAML. The single-date endpoint is the primary source for daily
+entities; the date-range endpoint is an optional advanced use case.
+
+---
+
 # Testing
 
 Run the complete suite:
@@ -690,15 +751,15 @@ Run the complete suite:
 pytest -q
 ```
 
-Current Phase 6 result:
+Current project test collection:
 
 ```text
-19 passed, 2 warnings
+48 tests collected
 ```
 
-The Phase 6 OpenAPI contract tests protect the endpoint path, parameters, defaults,
-validation ranges, response schemas, and success/error examples. Existing API tests
-verify the documented endpoint behavior.
+Phase 7 tests cover range behavior and OpenAPI contract tests protect both v1
+endpoints. Phase 8 verifies YAML syntax and the documented API paths and JSON fields
+against the existing v1 response contract.
 
 The warnings are from the current FastAPI/Starlette test-client dependency stack:
 
@@ -939,12 +1000,11 @@ The project is intentionally being implemented incrementally.
 The following is a proposed roadmap only. Each phase requires separate definition and
 approval before implementation:
 
-1. Phase 7: extended date/range endpoints
-2. Phase 8: Home Assistant integration
-3. Phase 9: Docker/containerization
-4. Phase 10: VPS deployment and HTTPS
-5. Phase 11: production observability and security
-6. Phase 12: final production testing and release
+1. Phase 9: Docker/containerization
+2. Phase 10: VPS deployment and HTTPS
+3. Phase 11: production observability and security
+4. Phase 12: final production testing and release
+5. Future Phase 13: native Home Assistant integration in a separate repository
 
 No database is planned until a concrete requirement exists.
 
@@ -1041,10 +1101,12 @@ Phase 2: APPROVED
 Phase 3: APPROVED (re-verified during this review)
 Phase 4: APPROVED
 Phase 5: APPROVED
-Phase 6: IMPLEMENTATION COMPLETE, PENDING APPROVAL
+Phase 6: APPROVED
+Phase 7: APPROVED
+Phase 8: IMPLEMENTATION COMPLETE, PENDING APPROVAL
 ```
 
-Do not begin Phase 7 until Phase 6 has been reviewed and explicitly approved.
+Do not begin Phase 9 until Phase 8 has been reviewed and explicitly approved.
 
 ---
 

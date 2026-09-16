@@ -1,0 +1,37 @@
+# Include this file with `automation: !include automations.yaml`, or create the
+# automations in the Home Assistant UI using the same trigger and action logic.
+# These template triggers are evaluated once each minute because they use now().
+
+- id: azanapi_fajr_notification
+  alias: Prayer times, Fajr Azan notification
+  description: Send a Home Assistant notification when the configured Fajr Azan time arrives.
+  triggers:
+    - trigger: template
+      value_template: >-
+        {{ states('sensor.prayer_fajr_azan') not in ['unknown', 'unavailable']
+           and now().strftime('%H:%M') == states('sensor.prayer_fajr_azan') }}
+  actions:
+    - action: persistent_notification.create
+      data:
+        title: Fajr Azan
+        message: >-
+          Fajr Azan is at {{ states('sensor.prayer_fajr_azan') }} in
+          {{ state_attr('sensor.prayer_times', 'timezone') }}.
+  mode: single
+
+- id: azanapi_maghrib_notification
+  alias: Prayer times, Maghrib Azan notification
+  description: Send a Home Assistant notification when the configured Maghrib Azan time arrives.
+  triggers:
+    - trigger: template
+      value_template: >-
+        {{ states('sensor.prayer_maghrib_azan') not in ['unknown', 'unavailable']
+           and now().strftime('%H:%M') == states('sensor.prayer_maghrib_azan') }}
+  actions:
+    - action: persistent_notification.create
+      data:
+        title: Maghrib Azan
+        message: >-
+          Maghrib Azan is at {{ states('sensor.prayer_maghrib_azan') }} in
+          {{ state_attr('sensor.prayer_times', 'timezone') }}.
+  mode: single

@@ -1,0 +1,88 @@
+# Add this file to Home Assistant's configuration.yaml, or split the `rest:` and
+# `template:` sections into included YAML files if that is how your installation
+# is organized. Replace the example host and prayer-calculation settings below.
+
+rest:
+  - resource: >-
+      http://192.168.1.50:8000/api/v1/prayer-times?latitude=25.2048&longitude=55.2708&timezone=Asia%2FDubai&calculation_method=dubai&madhab=shafi&high_latitude_rule=middle_of_the_night&fajr_adjustment=2&dhuhr_adjustment=0&asr_adjustment=0&maghrib_adjustment=0&isha_adjustment=0
+    scan_interval: 3600
+    timeout: 10
+    sensor:
+      - name: Prayer Times
+        unique_id: azanapi_prayer_times
+        value_template: "{{ value_json.date }}"
+        json_attributes:
+          - timezone
+          - coordinates
+          - calculation_method
+          - madhab
+          - high_latitude_rule
+          - calculated_times
+          - azan_times
+          - adjustments_minutes
+
+template:
+  - sensor:
+      # Calculated astronomical times. These values never include Azan adjustments.
+      - name: Prayer Fajr
+        unique_id: azanapi_prayer_fajr
+        icon: mdi:weather-sunset-up
+        availability: "{{ state_attr('sensor.prayer_times', 'calculated_times') is mapping }}"
+        state: "{{ state_attr('sensor.prayer_times', 'calculated_times')['fajr'] }}"
+      - name: Prayer Sunrise
+        unique_id: azanapi_prayer_sunrise
+        icon: mdi:weather-sunny
+        availability: "{{ state_attr('sensor.prayer_times', 'calculated_times') is mapping }}"
+        state: "{{ state_attr('sensor.prayer_times', 'calculated_times')['sunrise'] }}"
+      - name: Prayer Dhuhr
+        unique_id: azanapi_prayer_dhuhr
+        icon: mdi:white-balance-sunny
+        availability: "{{ state_attr('sensor.prayer_times', 'calculated_times') is mapping }}"
+        state: "{{ state_attr('sensor.prayer_times', 'calculated_times')['dhuhr'] }}"
+      - name: Prayer Asr
+        unique_id: azanapi_prayer_asr
+        icon: mdi:weather-sunny-alert
+        availability: "{{ state_attr('sensor.prayer_times', 'calculated_times') is mapping }}"
+        state: "{{ state_attr('sensor.prayer_times', 'calculated_times')['asr'] }}"
+      - name: Prayer Sunset
+        unique_id: azanapi_prayer_sunset
+        icon: mdi:weather-sunset-down
+        availability: "{{ state_attr('sensor.prayer_times', 'calculated_times') is mapping }}"
+        state: "{{ state_attr('sensor.prayer_times', 'calculated_times')['sunset'] }}"
+      - name: Prayer Maghrib
+        unique_id: azanapi_prayer_maghrib
+        icon: mdi:weather-sunset-down
+        availability: "{{ state_attr('sensor.prayer_times', 'calculated_times') is mapping }}"
+        state: "{{ state_attr('sensor.prayer_times', 'calculated_times')['maghrib'] }}"
+      - name: Prayer Isha
+        unique_id: azanapi_prayer_isha
+        icon: mdi:weather-night
+        availability: "{{ state_attr('sensor.prayer_times', 'calculated_times') is mapping }}"
+        state: "{{ state_attr('sensor.prayer_times', 'calculated_times')['isha'] }}"
+
+      # Final Azan times. These include the adjustment query parameters above.
+      - name: Prayer Fajr Azan
+        unique_id: azanapi_prayer_fajr_azan
+        icon: mdi:bell-ring-outline
+        availability: "{{ state_attr('sensor.prayer_times', 'azan_times') is mapping }}"
+        state: "{{ state_attr('sensor.prayer_times', 'azan_times')['fajr'] }}"
+      - name: Prayer Dhuhr Azan
+        unique_id: azanapi_prayer_dhuhr_azan
+        icon: mdi:bell-ring-outline
+        availability: "{{ state_attr('sensor.prayer_times', 'azan_times') is mapping }}"
+        state: "{{ state_attr('sensor.prayer_times', 'azan_times')['dhuhr'] }}"
+      - name: Prayer Asr Azan
+        unique_id: azanapi_prayer_asr_azan
+        icon: mdi:bell-ring-outline
+        availability: "{{ state_attr('sensor.prayer_times', 'azan_times') is mapping }}"
+        state: "{{ state_attr('sensor.prayer_times', 'azan_times')['asr'] }}"
+      - name: Prayer Maghrib Azan
+        unique_id: azanapi_prayer_maghrib_azan
+        icon: mdi:bell-ring-outline
+        availability: "{{ state_attr('sensor.prayer_times', 'azan_times') is mapping }}"
+        state: "{{ state_attr('sensor.prayer_times', 'azan_times')['maghrib'] }}"
+      - name: Prayer Isha Azan
+        unique_id: azanapi_prayer_isha_azan
+        icon: mdi:bell-ring-outline
+        availability: "{{ state_attr('sensor.prayer_times', 'azan_times') is mapping }}"
+        state: "{{ state_attr('sensor.prayer_times', 'azan_times')['isha'] }}"
