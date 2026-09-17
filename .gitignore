@@ -29,3 +29,7 @@ htmlcov/
 
 # OS
 .DS_Store
+
+# Development
+*.log
+prayer_timing_api.egg-info
