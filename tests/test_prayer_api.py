@@ -138,6 +138,43 @@ def test_dubai_negative_adjustment() -> None:
     assert body["azan_times"]["maghrib"] == "18:23"
 
 
+def test_iacad_dubai_uses_internal_asr_offset_and_independent_azan_adjustment() -> None:
+    response = client.get(
+        "/api/v1/prayer-times",
+        params={
+            "latitude": 25.2048,
+            "longitude": 55.2708,
+            "timezone": "Asia/Dubai",
+            "date": "2026-09-15",
+            "calculation_method": "iacad_dubai",
+            "madhab": "shafi",
+            "asr_adjustment": 2,
+        },
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+
+    assert body["calculation_method"] == "iacad_dubai"
+    assert body["calculated_times"] == {
+        "fajr": "04:47",
+        "sunrise": "06:02",
+        "dhuhr": "12:17",
+        "asr": "15:42",
+        "sunset": "18:23",
+        "maghrib": "18:26",
+        "isha": "19:41",
+    }
+    assert body["azan_times"]["asr"] == "15:44"
+    assert body["adjustments_minutes"] == {
+        "fajr": 0,
+        "dhuhr": 0,
+        "asr": 2,
+        "maghrib": 0,
+        "isha": 0,
+    }
+
+
 def test_prayer_times_defaults_date_in_requested_timezone() -> None:
     response = client.get(
         "/api/v1/prayer-times",

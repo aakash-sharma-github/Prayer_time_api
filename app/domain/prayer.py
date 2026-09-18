@@ -10,6 +10,7 @@ class CalculationMethodName(str, Enum):
     KARACHI = "karachi"
     UMM_AL_QURA = "umm_al_qura"
     DUBAI = "dubai"
+    IACAD_DUBAI = "iacad_dubai"
     MOON_SIGHTING_COMMITTEE = "moon_sighting_committee"
     NORTH_AMERICA = "north_america"
     KUWAIT = "kuwait"

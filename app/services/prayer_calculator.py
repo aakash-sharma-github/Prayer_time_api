@@ -1,3 +1,4 @@
+from copy import copy
 from datetime import datetime, time, timezone
 
 from adhanpy.calculation.CalculationMethod import CalculationMethod
@@ -26,6 +27,7 @@ _CALCULATION_METHODS = {
     CalculationMethodName.KARACHI: CalculationMethod.KARACHI,
     CalculationMethodName.UMM_AL_QURA: CalculationMethod.UMM_AL_QURA,
     CalculationMethodName.DUBAI: CalculationMethod.DUBAI,
+    CalculationMethodName.IACAD_DUBAI: CalculationMethod.DUBAI,
     CalculationMethodName.MOON_SIGHTING_COMMITTEE: (CalculationMethod.MOON_SIGHTING_COMMITTEE),
     CalculationMethodName.NORTH_AMERICA: CalculationMethod.NORTH_AMERICA,
     CalculationMethodName.KUWAIT: CalculationMethod.KUWAIT,
@@ -57,6 +59,13 @@ class PrayerCalculator:
         parameters = CalculationParameters(method=calculation_method)
         parameters.madhab = _MADHABS[request.madhab]
         parameters.high_latitude_rule = _HIGH_LATITUDE_RULES[request.high_latitude_rule]
+        if request.calculation_method == CalculationMethodName.IACAD_DUBAI:
+            # Keep adhanpy's Dubai astronomical profile while applying the IACAD-
+            # validated internal Asr method offset. This is deliberately separate
+            # from caller-controlled Azan adjustments. adhanpy reuses the method
+            # adjustment object, so copy it before changing this calculation only.
+            parameters.method_adjustments = copy(parameters.method_adjustments)
+            parameters.method_adjustments.asr = 1
 
         # adhanpy converts the supplied date through UTC internally.
         # UTC noon prevents a positive-offset timezone from rolling the

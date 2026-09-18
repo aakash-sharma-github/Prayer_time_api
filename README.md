@@ -101,7 +101,14 @@ The example demonstrates the response format. Prayer times vary according to the
 | `high_latitude_rule` | `middle_of_the_night`, `seventh_of_the_night`, or `twilight_angle` | `middle_of_the_night` |
 | `fajr_adjustment`, `dhuhr_adjustment`, `asr_adjustment`, `maghrib_adjustment`, `isha_adjustment` | Whole minutes from `-1440` to `1440` | `0` |
 
-Supported calculation methods: `muslim_world_league`, `egyptian`, `karachi`, `umm_al_qura`, `dubai`, `moon_sighting_committee`, `north_america`, `kuwait`, `qatar`, `singapore`, and `uoif`.
+Supported calculation methods: `muslim_world_league`, `egyptian`, `karachi`, `umm_al_qura`, `dubai`, `iacad_dubai`, `moon_sighting_committee`, `north_america`, `kuwait`, `qatar`, `singapore`, and `uoif`.
+
+`dubai` preserves adhanpy's standard Dubai profile. `iacad_dubai` is an opt-in,
+Dubai-specific profile validated against available official IACAD Dubai reference
+data. It retains the Dubai calculation profile while using an internal Asr method
+offset of `+1` minute rather than adhanpy Dubai's `+3` minutes. This is part of the
+calculation method, not an `asr_adjustment`; client Azan adjustments remain optional
+post-calculation offsets.
 
 Sunrise and sunset are returned only in `calculated_times`; they are not Azan prayers and cannot be adjusted. An adjustment can cross midnight, but v1 returns bare `HH:MM` strings, so clients scheduling an adjusted time should account for rollover.
 

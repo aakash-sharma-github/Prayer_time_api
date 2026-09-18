@@ -91,6 +91,7 @@ def test_v1_openapi_documents_success_and_error_schemas_and_examples() -> None:
         "karachi",
         "umm_al_qura",
         "dubai",
+        "iacad_dubai",
         "moon_sighting_committee",
         "north_america",
         "kuwait",

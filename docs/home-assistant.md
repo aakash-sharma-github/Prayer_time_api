@@ -54,13 +54,17 @@ Change every value in the example URL:
 | Latitude | `25.2048` | Decimal degrees from `-90` to `90`. |
 | Longitude | `55.2708` | Decimal degrees from `-180` to `180`. |
 | Timezone | `Asia/Dubai` | URL-encoded as `Asia%2FDubai` in the example. |
-| Calculation method | `dubai` | Select the method appropriate for your location. |
+| Calculation method | `dubai` | Select the method appropriate for your location. Use `iacad_dubai` for the opt-in IACAD-validated Dubai profile. |
 | Madhab | `shafi` | Use `hanafi` when appropriate. |
 | High-latitude rule | `middle_of_the_night` | Change only if required. |
 
 Supported calculation methods are `muslim_world_league`, `egyptian`, `karachi`,
-`umm_al_qura`, `dubai`, `moon_sighting_committee`, `north_america`, `kuwait`,
+`umm_al_qura`, `dubai`, `iacad_dubai`, `moon_sighting_committee`, `north_america`, `kuwait`,
 `qatar`, `singapore`, and `uoif`.
+
+`iacad_dubai` retains Dubai calculation behavior while using the IACAD-validated
+internal Asr method offset. It is distinct from `asr_adjustment`, which remains a
+client-specific adjustment applied only after calculated prayer times are returned.
 
 After editing YAML, use **Developer tools, YAML, Check configuration**, restart Home
 Assistant after it passes, then inspect entities in **Developer tools, States**.

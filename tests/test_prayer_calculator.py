@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, timedelta
 from zoneinfo import ZoneInfo
 
 import pytest
@@ -115,3 +115,35 @@ def test_positive_timezone_preserves_requested_date() -> None:
     assert result.sunset.date() == date(2026, 9, 14)
     assert result.maghrib.date() == date(2026, 9, 14)
     assert result.isha.date() == date(2026, 9, 14)
+
+
+def test_iacad_dubai_changes_only_the_internal_asr_method_offset() -> None:
+    calculator = PrayerCalculator()
+    request_options = {
+        "latitude": 25.2048,
+        "longitude": 55.2708,
+        "date": date(2026, 9, 15),
+        "timezone": ZoneInfo("Asia/Dubai"),
+        "madhab": MadhabName.SHAFI,
+        "high_latitude_rule": HighLatitudeRuleName.MIDDLE_OF_THE_NIGHT,
+    }
+
+    dubai_result = calculator.calculate(
+        PrayerCalculationRequest(
+            **request_options,
+            calculation_method=CalculationMethodName.DUBAI,
+        )
+    )
+    iacad_result = calculator.calculate(
+        PrayerCalculationRequest(
+            **request_options,
+            calculation_method=CalculationMethodName.IACAD_DUBAI,
+        )
+    )
+
+    assert dubai_result.asr.strftime("%H:%M") == "15:44"
+    assert iacad_result.asr.strftime("%H:%M") == "15:42"
+    assert iacad_result.asr == dubai_result.asr - timedelta(minutes=2)
+
+    for prayer_name in ("fajr", "sunrise", "dhuhr", "sunset", "maghrib", "isha"):
+        assert getattr(iacad_result, prayer_name) == getattr(dubai_result, prayer_name)

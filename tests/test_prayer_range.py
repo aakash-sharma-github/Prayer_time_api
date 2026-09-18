@@ -93,6 +93,24 @@ def test_range_calculates_each_date_independently() -> None:
     assert all(day.result.timezone == timezone for day in days)
 
 
+def test_range_supports_iacad_dubai_with_its_internal_asr_offset() -> None:
+    service = PrayerRangeService()
+    days = service.calculate(
+        start_date=date(2026, 9, 15),
+        end_date=date(2026, 9, 16),
+        latitude=25.2048,
+        longitude=55.2708,
+        timezone=ZoneInfo("Asia/Dubai"),
+        calculation_method=CalculationMethodName.IACAD_DUBAI,
+        madhab=MadhabName.SHAFI,
+        high_latitude_rule=HighLatitudeRuleName.MIDDLE_OF_THE_NIGHT,
+        adjustments=PrayerAdjustments(asr=2),
+    )
+
+    assert [day.result.asr.strftime("%H:%M") for day in days] == ["15:42", "15:42"]
+    assert [day.azan_times["asr"].strftime("%H:%M") for day in days] == ["15:44", "15:44"]
+
+
 def test_range_supports_all_calculation_methods_and_high_latitude_rules() -> None:
     service = PrayerRangeService()
     for calculation_method in CalculationMethodName:
