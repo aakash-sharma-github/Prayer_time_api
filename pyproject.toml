@@ -9,8 +9,9 @@ description = "Production-oriented Islamic prayer and Azan timing API"
 requires-python = ">=3.11"
 dependencies = [
     "fastapi>=0.115,<1.0",
-    "uvicorn[standard]>=0.30,<1.0",
     "adhanpy>=1.0,<2.0",
+    "tzdata>=2026.4",
+    "uvicorn>=0.30,<1.0",
 ]
 
 [tool.pytest.ini_options]
@@ -27,4 +28,14 @@ select = [
     "E",
     "F",
     "I",
+]
+
+[tool.setuptools.packages.find]
+include = ["app*"]
+exclude = ["postman*"]
+
+[dependency-groups]
+dev = [
+    "workers-py>=1.17.3",
+    "workers-runtime-sdk>=1.9.0",
 ]

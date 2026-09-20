@@ -23,14 +23,15 @@ is an optional advanced API for future schedule or calendar views.
 Verify the API from the Home Assistant host before editing YAML:
 
 ```bash
-curl --get http://API_HOST:8000/api/v1/prayer-times \
+curl --get https://api.aakashsharma.com.np/api/v1/prayer-times \
   --data-urlencode latitude=25.2048 \
   --data-urlencode longitude=55.2708 \
   --data-urlencode timezone=Asia/Dubai \
-  --data-urlencode calculation_method=dubai
+  --data-urlencode calculation_method=iacad_dubai
 ```
 
-Replace `API_HOST` and every example setting with your own values. If Home Assistant
+This uses the production API base URL. To call a self-hosted instance instead,
+replace the base URL and every example setting with your own values. If Home Assistant
 runs in a container, `127.0.0.1` normally points to that container, not the host
 running azanAPI. Use a LAN IP address, DNS name, or reachable container hostname.
 
@@ -50,7 +51,7 @@ Change every value in the example URL:
 
 | Setting | Example | Notes |
 |---|---|---|
-| API host | `192.168.1.50:8000` | Must be reachable from Home Assistant. |
+| API base URL | `https://api.aakashsharma.com.np` | Canonical production API. A self-hosted LAN URL must be reachable from Home Assistant. |
 | Latitude | `25.2048` | Decimal degrees from `-90` to `90`. |
 | Longitude | `55.2708` | Decimal degrees from `-180` to `180`. |
 | Timezone | `Asia/Dubai` | URL-encoded as `Asia%2FDubai` in the example. |

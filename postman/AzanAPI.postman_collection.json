@@ -2,13 +2,13 @@
   "info": {
     "_postman_id": "3a122132-2d0e-4bc5-a021-500ef353c45c",
     "name": "AzanAPI verification",
-    "description": "Manual checks matching the API test suite. Set baseUrl if the server runs anywhere other than http://127.0.0.1:8000.",
+    "description": "Manual checks matching the API test suite. Requests default to the production API; set base_url to a local or self-hosted URL when needed.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
     {
-      "key": "baseUrl",
-      "value": "http://127.0.0.1:8000"
+      "key": "base_url",
+      "value": "https://api.aakashsharma.com.np"
     }
   ],
   "item": [
@@ -17,12 +17,12 @@
       "item": [
         {
           "name": "Root — service information (200)",
-          "request": { "method": "GET", "url": "{{baseUrl}}/" },
+          "request": { "method": "GET", "url": "{{base_url}}/" },
           "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('HTTP 200', () => pm.response.to.have.status(200));", "pm.test('Service is running', () => pm.expect(pm.response.json()).to.include({ status: 'running' }));"] }}]
         },
         {
           "name": "Health — healthy (200)",
-          "request": { "method": "GET", "url": "{{baseUrl}}/health" },
+          "request": { "method": "GET", "url": "{{base_url}}/health" },
           "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('HTTP 200', () => pm.response.to.have.status(200));", "pm.test('Healthy response', () => pm.expect(pm.response.json()).to.eql({ status: 'healthy' }));"] }}]
         }
       ]
@@ -32,22 +32,22 @@
       "item": [
         {
           "name": "Reference case — North America / Hanafi (200)",
-          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/prayer-times?latitude=35.775&longitude=-78.6336&timezone=America%2FNew_York&date=2015-07-12&calculation_method=north_america&madhab=hanafi" },
+          "request": { "method": "GET", "url": "{{base_url}}/api/v1/prayer-times?latitude=35.775&longitude=-78.6336&timezone=America%2FNew_York&date=2015-07-12&calculation_method=north_america&madhab=hanafi" },
           "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('HTTP 200', () => pm.response.to.have.status(200));", "pm.test('Reference times', () => pm.expect(pm.response.json().calculated_times).to.eql({ fajr: '04:42', sunrise: '06:08', dhuhr: '13:21', asr: '18:22', sunset: '20:32', maghrib: '20:32', isha: '21:57' }));"] }}]
         },
         {
           "name": "Dubai — positive Fajr and Isha adjustments (200)",
-          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/prayer-times?latitude=25.2048&longitude=55.2708&timezone=Asia%2FDubai&date=2026-09-15&calculation_method=dubai&madhab=shafi&fajr_adjustment=2&isha_adjustment=10" },
+          "request": { "method": "GET", "url": "{{base_url}}/api/v1/prayer-times?latitude=25.2048&longitude=55.2708&timezone=Asia%2FDubai&date=2026-09-15&calculation_method=dubai&madhab=shafi&fajr_adjustment=2&isha_adjustment=10" },
           "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('HTTP 200', () => pm.response.to.have.status(200));", "pm.test('Only Azan values change', () => { const b = pm.response.json(); pm.expect(b.calculated_times.fajr).to.eql('04:47'); pm.expect(b.azan_times.fajr).to.eql('04:49'); pm.expect(b.calculated_times.isha).to.eql('19:41'); pm.expect(b.azan_times.isha).to.eql('19:51'); });"] }}]
         },
         {
           "name": "Dubai — negative Maghrib adjustment (200)",
-          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/prayer-times?latitude=25.2048&longitude=55.2708&timezone=Asia%2FDubai&date=2026-09-15&calculation_method=dubai&maghrib_adjustment=-3" },
+          "request": { "method": "GET", "url": "{{base_url}}/api/v1/prayer-times?latitude=25.2048&longitude=55.2708&timezone=Asia%2FDubai&date=2026-09-15&calculation_method=dubai&maghrib_adjustment=-3" },
           "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('HTTP 200', () => pm.response.to.have.status(200));", "pm.test('Maghrib is three minutes earlier', () => { const b = pm.response.json(); pm.expect(b.calculated_times.maghrib).to.eql('18:26'); pm.expect(b.azan_times.maghrib).to.eql('18:23'); });"] }}]
         },
         {
           "name": "Isha midnight rollover (200)",
-          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/prayer-times?latitude=35.775&longitude=-78.6336&timezone=America%2FNew_York&date=2015-07-12&calculation_method=north_america&madhab=hanafi&isha_adjustment=150" },
+          "request": { "method": "GET", "url": "{{base_url}}/api/v1/prayer-times?latitude=35.775&longitude=-78.6336&timezone=America%2FNew_York&date=2015-07-12&calculation_method=north_america&madhab=hanafi&isha_adjustment=150" },
           "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('HTTP 200', () => pm.response.to.have.status(200));", "pm.test('Isha rolls over midnight', () => { const b = pm.response.json(); pm.expect(b.calculated_times.isha).to.eql('21:57'); pm.expect(b.azan_times.isha).to.eql('00:27'); });"] }}]
         }
       ]
@@ -57,52 +57,52 @@
       "item": [
         {
           "name": "Unknown timezone (400)",
-          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/prayer-times?latitude=25.2048&longitude=55.2708&timezone=Not%2FARealTimezone&date=2026-09-14&calculation_method=dubai" },
+          "request": { "method": "GET", "url": "{{base_url}}/api/v1/prayer-times?latitude=25.2048&longitude=55.2708&timezone=Not%2FARealTimezone&date=2026-09-14&calculation_method=dubai" },
           "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('HTTP 400', () => pm.response.to.have.status(400));", "pm.test('INVALID_TIMEZONE code', () => pm.expect(pm.response.json().error.code).to.eql('INVALID_TIMEZONE'));" ] }}]
         },
         {
           "name": "Latitude above 90 (422)",
-          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/prayer-times?latitude=100&longitude=55.2708&timezone=Asia%2FDubai&date=2026-09-14&calculation_method=dubai" },
+          "request": { "method": "GET", "url": "{{base_url}}/api/v1/prayer-times?latitude=100&longitude=55.2708&timezone=Asia%2FDubai&date=2026-09-14&calculation_method=dubai" },
           "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('HTTP 422', () => pm.response.to.have.status(422));", "pm.test('Latitude validation', () => { const d = pm.response.json().error.details[0]; pm.expect(d).to.include({ field: 'query.latitude', type: 'less_than_equal' }); });"] }}]
         },
         {
           "name": "Invalid calculation method (422)",
-          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/prayer-times?latitude=25.2048&longitude=55.2708&timezone=Asia%2FDubai&date=2026-09-14&calculation_method=invalid_method" },
+          "request": { "method": "GET", "url": "{{base_url}}/api/v1/prayer-times?latitude=25.2048&longitude=55.2708&timezone=Asia%2FDubai&date=2026-09-14&calculation_method=invalid_method" },
           "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('HTTP 422', () => pm.response.to.have.status(422));", "pm.test('Method enum validation', () => pm.expect(pm.response.json().error.details[0]).to.include({ field: 'query.calculation_method', type: 'enum' }));"] }}]
         },
         {
           "name": "Invalid madhab (422)",
-          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/prayer-times?latitude=25.2048&longitude=55.2708&timezone=Asia%2FDubai&date=2026-09-14&calculation_method=dubai&madhab=invalid_madhab" },
+          "request": { "method": "GET", "url": "{{base_url}}/api/v1/prayer-times?latitude=25.2048&longitude=55.2708&timezone=Asia%2FDubai&date=2026-09-14&calculation_method=dubai&madhab=invalid_madhab" },
           "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('HTTP 422', () => pm.response.to.have.status(422));"] }}]
         },
         {
           "name": "Invalid high-latitude rule (422)",
-          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/prayer-times?latitude=25.2048&longitude=55.2708&timezone=Asia%2FDubai&date=2026-09-14&calculation_method=dubai&high_latitude_rule=invalid_rule" },
+          "request": { "method": "GET", "url": "{{base_url}}/api/v1/prayer-times?latitude=25.2048&longitude=55.2708&timezone=Asia%2FDubai&date=2026-09-14&calculation_method=dubai&high_latitude_rule=invalid_rule" },
           "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('HTTP 422', () => pm.response.to.have.status(422));"] }}]
         },
         {
           "name": "Fajr adjustment above maximum (422)",
-          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/prayer-times?latitude=25.2048&longitude=55.2708&timezone=Asia%2FDubai&date=2026-09-14&calculation_method=dubai&fajr_adjustment=1441" },
+          "request": { "method": "GET", "url": "{{base_url}}/api/v1/prayer-times?latitude=25.2048&longitude=55.2708&timezone=Asia%2FDubai&date=2026-09-14&calculation_method=dubai&fajr_adjustment=1441" },
           "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('HTTP 422', () => pm.response.to.have.status(422));", "pm.test('Adjustment validation', () => pm.expect(pm.response.json().error.details[0]).to.include({ field: 'query.fajr_adjustment', type: 'less_than_equal' }));"] }}]
         },
         {
           "name": "Dhuhr adjustment above maximum (422)",
-          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/prayer-times?latitude=25.2048&longitude=55.2708&timezone=Asia%2FDubai&date=2026-09-14&calculation_method=dubai&dhuhr_adjustment=1441" },
+          "request": { "method": "GET", "url": "{{base_url}}/api/v1/prayer-times?latitude=25.2048&longitude=55.2708&timezone=Asia%2FDubai&date=2026-09-14&calculation_method=dubai&dhuhr_adjustment=1441" },
           "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('HTTP 422', () => pm.response.to.have.status(422));"] }}]
         },
         {
           "name": "Asr adjustment above maximum (422)",
-          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/prayer-times?latitude=25.2048&longitude=55.2708&timezone=Asia%2FDubai&date=2026-09-14&calculation_method=dubai&asr_adjustment=1441" },
+          "request": { "method": "GET", "url": "{{base_url}}/api/v1/prayer-times?latitude=25.2048&longitude=55.2708&timezone=Asia%2FDubai&date=2026-09-14&calculation_method=dubai&asr_adjustment=1441" },
           "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('HTTP 422', () => pm.response.to.have.status(422));"] }}]
         },
         {
           "name": "Maghrib adjustment above maximum (422)",
-          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/prayer-times?latitude=25.2048&longitude=55.2708&timezone=Asia%2FDubai&date=2026-09-14&calculation_method=dubai&maghrib_adjustment=1441" },
+          "request": { "method": "GET", "url": "{{base_url}}/api/v1/prayer-times?latitude=25.2048&longitude=55.2708&timezone=Asia%2FDubai&date=2026-09-14&calculation_method=dubai&maghrib_adjustment=1441" },
           "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('HTTP 422', () => pm.response.to.have.status(422));"] }}]
         },
         {
           "name": "Isha adjustment above maximum (422)",
-          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/prayer-times?latitude=25.2048&longitude=55.2708&timezone=Asia%2FDubai&date=2026-09-14&calculation_method=dubai&isha_adjustment=1441" },
+          "request": { "method": "GET", "url": "{{base_url}}/api/v1/prayer-times?latitude=25.2048&longitude=55.2708&timezone=Asia%2FDubai&date=2026-09-14&calculation_method=dubai&isha_adjustment=1441" },
           "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('HTTP 422', () => pm.response.to.have.status(422));"] }}]
         }
       ]

@@ -7,8 +7,10 @@ install a custom integration or add Home Assistant-specific code to the API.
 
 1. Copy the `rest:` and `template:` sections from `configuration.yaml` into your
    Home Assistant `configuration.yaml`.
-2. Replace `192.168.1.50:8000`, latitude, longitude, timezone, calculation method,
-   Madhab, high-latitude rule, and all adjustment values with your own settings.
+2. The example uses the production API at `https://api.aakashsharma.com.np`. Replace
+   the API base URL, latitude, longitude, timezone, calculation method, Madhab,
+   high-latitude rule, and adjustment values when using a self-hosted instance or
+   different calculation settings.
 3. Copy the list in `automations.yaml` into the automations file configured by your
    Home Assistant installation. A common arrangement is
    `automation: !include automations.yaml` in `configuration.yaml`.

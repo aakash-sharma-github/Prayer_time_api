@@ -33,3 +33,5 @@ htmlcov/
 # Development
 *.log
 prayer_timing_api.egg-info
+.wrangler/
+python_modules/

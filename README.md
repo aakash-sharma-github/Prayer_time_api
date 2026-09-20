@@ -4,17 +4,29 @@ azanAPI is a stateless, versioned REST API for calculating Islamic prayer times 
 
 The API uses [adhanpy](https://github.com/alphahm/adhanpy) for astronomical calculations. It does not infer a timezone from coordinates, store request data, or require an external prayer-times service.
 
+## Production API
+
+The canonical public API base URL is:
+
+```text
+https://api.aakashsharma.com.np
+```
+
+Use this base URL for public clients and examples. The versioned prayer endpoints are
+under `https://api.aakashsharma.com.np/api/v1/`. Local URLs in the development
+section below are intentionally separate from the production API.
+
 ## Features
 
 - Single-day and inclusive date-range prayer-time endpoints
-- Eleven calculation methods, Shafi and Hanafi Asr calculations, and high-latitude rules
+- Twelve calculation methods, Shafi and Hanafi Asr calculations, and high-latitude rules
 - Explicit IANA timezone handling and local `HH:MM` results
 - Separate immutable calculated times and optional per-prayer Azan adjustments
 - Predictable JSON error responses and generated OpenAPI documentation
 - Docker image that runs as a non-root user and exposes a health check
 - Home Assistant REST sensor and automation examples
 
-## Quick start
+## Local development
 
 Prerequisites: Python 3.11 or later and `pip`.
 
@@ -45,41 +57,48 @@ All public prayer endpoints are versioned under `/api/v1`.
 
 | Method | Endpoint | Description |
 | --- | --- | --- |
+| `GET` | `/` | Service metadata and status. |
+| `GET` | `/health` | Health status for monitors and container platforms. |
 | `GET` | `/api/v1/prayer-times` | Calculate times for one local calendar date. |
 | `GET` | `/api/v1/prayer-times/range` | Calculate times for an inclusive range of up to 366 local dates. |
+
+For production requests, use `https://api.aakashsharma.com.np` as the base URL:
+
+```bash
+curl --get https://api.aakashsharma.com.np/health
+```
 
 ### Calculate one day
 
 ```bash
-curl --get http://127.0.0.1:8000/api/v1/prayer-times \
+curl --get https://api.aakashsharma.com.np/api/v1/prayer-times \
   --data-urlencode latitude=25.2048 \
   --data-urlencode longitude=55.2708 \
   --data-urlencode timezone=Asia/Dubai \
-  --data-urlencode date=2026-09-15 \
-  --data-urlencode calculation_method=dubai \
-  --data-urlencode isha_adjustment=10
+  --data-urlencode date=2026-09-18 \
+  --data-urlencode calculation_method=iacad_dubai
 ```
 
 The response includes the settings actually used, the raw astronomical values, and the final Azan values. Azan adjustments never modify `calculated_times`.
 
 ```json
 {
-  "date": "2026-09-15",
+  "date": "2026-09-18",
   "timezone": "Asia/Dubai",
   "coordinates": { "latitude": 25.2048, "longitude": 55.2708 },
-  "calculation_method": "dubai",
+  "calculation_method": "iacad_dubai",
   "madhab": "shafi",
   "high_latitude_rule": "middle_of_the_night",
   "calculated_times": {
-    "fajr": "04:47", "sunrise": "06:01", "dhuhr": "12:17",
-    "asr": "15:43", "sunset": "18:22", "maghrib": "18:25", "isha": "19:39"
+    "fajr": "04:48", "sunrise": "06:03", "dhuhr": "12:16",
+    "asr": "15:41", "sunset": "18:19", "maghrib": "18:23", "isha": "19:37"
   },
   "azan_times": {
-    "fajr": "04:47", "dhuhr": "12:17", "asr": "15:43",
-    "maghrib": "18:25", "isha": "19:49"
+    "fajr": "04:48", "dhuhr": "12:16", "asr": "15:41",
+    "maghrib": "18:23", "isha": "19:37"
   },
   "adjustments_minutes": {
-    "fajr": 0, "dhuhr": 0, "asr": 0, "maghrib": 0, "isha": 10
+    "fajr": 0, "dhuhr": 0, "asr": 0, "maghrib": 0, "isha": 0
   }
 }
 ```
@@ -117,13 +136,13 @@ Sunrise and sunset are returned only in `calculated_times`; they are not Azan pr
 Use `/api/v1/prayer-times/range` with the same settings as the single-day endpoint, replacing `date` with required `start_date` and `end_date` values. Both dates are included, the limit is 366 days, and results are in chronological order.
 
 ```bash
-curl --get http://127.0.0.1:8000/api/v1/prayer-times/range \
+curl --get https://api.aakashsharma.com.np/api/v1/prayer-times/range \
   --data-urlencode latitude=25.2048 \
   --data-urlencode longitude=55.2708 \
   --data-urlencode timezone=Asia/Dubai \
-  --data-urlencode start_date=2026-09-15 \
-  --data-urlencode end_date=2026-09-17 \
-  --data-urlencode calculation_method=dubai
+  --data-urlencode start_date=2026-09-18 \
+  --data-urlencode end_date=2026-09-20 \
+  --data-urlencode calculation_method=iacad_dubai
 ```
 
 ### Errors and compatibility
@@ -164,6 +183,18 @@ docker run --rm -p 8000:8000 -e LOG_LEVEL=INFO azanapi:latest
 ```
 
 The container listens on port `8000`, runs as a non-root user, and includes a health check against `/health`.
+
+## Production deployment
+
+The production API is served through the custom domain
+`https://api.aakashsharma.com.np`. The application is adapted for the Cloudflare
+Worker named `azan-api`; its deployment URL is
+`https://azan-api.aakashsharma9855.workers.dev`. The Worker URL is deployment
+infrastructure, not the recommended public API base URL.
+
+The current repository contains the Worker entry point (`worker.py`) and Wrangler
+configuration (`wrangler.jsonc`). A repeatable deployment or rollback procedure is
+not documented in the current repository.
 
 ## Documentation site and Home Assistant
 

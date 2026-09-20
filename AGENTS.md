@@ -55,7 +55,7 @@ Prayer routes require explicit `latitude`, `longitude`, `timezone` (IANA), and
 
 Supported calculation methods are `muslim_world_league`, `egyptian`, `karachi`,
 `umm_al_qura`, `dubai`, `moon_sighting_committee`, `north_america`, `kuwait`,
-`qatar`, `singapore`, and `uoif`. Madhabs are `shafi` and `hanafi`; high-latitude
+`qatar`, `singapore`, `uoif`, and `iacad_dubai`. Madhabs are `shafi` and `hanafi`; high-latitude
 rules are `middle_of_the_night`, `seventh_of_the_night`, and `twilight_angle`.
 
 Successful responses contain immutable `calculated_times`, separately adjusted
