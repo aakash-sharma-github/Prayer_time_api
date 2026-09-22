@@ -6,6 +6,7 @@ from fastapi import FastAPI
 
 from app.api.errors import register_error_handlers
 from app.api.health import router as health_router
+from app.api.v1.calculation_methods import router as calculation_methods_router
 from app.api.v1.prayer_times import router as prayer_times_router
 from app.api.v1.prayer_times_range import router as prayer_times_range_router
 from app.core.config import settings
@@ -59,5 +60,6 @@ async def root() -> dict[str, str]:
 
 
 app.include_router(health_router)
+app.include_router(calculation_methods_router)
 app.include_router(prayer_times_router)
 app.include_router(prayer_times_range_router)

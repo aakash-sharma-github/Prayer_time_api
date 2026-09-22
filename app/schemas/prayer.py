@@ -48,6 +48,14 @@ class PrayerAdjustmentsResponse(BaseModel):
     isha: int = Field(ge=-1440, le=1440)
 
 
+class CalculationMethodsResponse(BaseModel):
+    """The calculation settings accepted by the v1 prayer-time endpoints."""
+
+    calculation_methods: list[CalculationMethodName]
+    madhabs: list[MadhabName]
+    high_latitude_rules: list[HighLatitudeRuleName]
+
+
 class PrayerTimesResponse(BaseModel):
     """The stable v1 response for a single location and calendar date."""
 

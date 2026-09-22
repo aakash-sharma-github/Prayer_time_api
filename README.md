@@ -59,6 +59,7 @@ All public prayer endpoints are versioned under `/api/v1`.
 | --- | --- | --- |
 | `GET` | `/` | Service metadata and status. |
 | `GET` | `/health` | Health status for monitors and container platforms. |
+| `GET` | `/api/v1/calculation-methods` | List calculation settings accepted by v1 prayer endpoints. |
 | `GET` | `/api/v1/prayer-times` | Calculate times for one local calendar date. |
 | `GET` | `/api/v1/prayer-times/range` | Calculate times for an inclusive range of up to 366 local dates. |
 
@@ -121,6 +122,17 @@ The example demonstrates the response format. Prayer times vary according to the
 | `fajr_adjustment`, `dhuhr_adjustment`, `asr_adjustment`, `maghrib_adjustment`, `isha_adjustment` | Whole minutes from `-1440` to `1440` | `0` |
 
 Supported calculation methods: `muslim_world_league`, `egyptian`, `karachi`, `umm_al_qura`, `dubai`, `iacad_dubai`, `moon_sighting_committee`, `north_america`, `kuwait`, `qatar`, `singapore`, and `uoif`.
+
+### Discover supported calculation settings
+
+Clients that need to present configuration choices can fetch the exact enums accepted
+by the installed v1 API:
+
+```bash
+curl https://api.aakashsharma.com.np/api/v1/calculation-methods
+```
+
+The response contains `calculation_methods`, `madhabs`, and `high_latitude_rules`.
 
 `dubai` preserves adhanpy's standard Dubai profile. `iacad_dubai` is an opt-in,
 Dubai-specific profile validated against available official IACAD Dubai reference

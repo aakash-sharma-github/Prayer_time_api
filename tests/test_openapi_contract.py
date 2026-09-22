@@ -110,6 +110,18 @@ def test_v1_openapi_documents_success_and_error_schemas_and_examples() -> None:
     assert components["ValidationErrorResponse"]["example"]["error"]["details"]
 
 
+def test_calculation_methods_openapi_contract_is_documented() -> None:
+    schema = app.openapi()
+    operation = schema["paths"]["/api/v1/calculation-methods"]["get"]
+
+    assert operation["summary"] == "List supported prayer calculation settings"
+    assert operation["tags"] == ["Prayer times"]
+    assert set(operation["responses"]) == {"200"}
+    assert operation["responses"]["200"]["content"]["application/json"]["schema"] == {
+        "$ref": "#/components/schemas/CalculationMethodsResponse"
+    }
+
+
 def test_v1_range_openapi_contract_is_documented() -> None:
     schema = app.openapi()
     operation = schema["paths"]["/api/v1/prayer-times/range"]["get"]
