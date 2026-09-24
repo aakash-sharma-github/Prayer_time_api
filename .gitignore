@@ -35,3 +35,4 @@ htmlcov/
 prayer_timing_api.egg-info
 .wrangler/
 python_modules/
+.venv-workers/
